@@ -15,7 +15,7 @@ services:
     environment:
       TZ: Europe/Moscow
 
-    command: sh -c "pnpm build && pnpm start:regular-node"
+    command: sh -c "pnpm build && pnpm start:regular"
     ports:
       - '12390:12390'
     volumes:
