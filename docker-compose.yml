@@ -8,48 +8,16 @@ services:
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
 
-  language_server:
+  regular_node:
     env_file: .language_server.env
     build: .
 
     environment:
       TZ: Europe/Moscow
 
-    command: sh -c "pnpm build && pnpm start:lserver:prod"
+    command: sh -c "pnpm build && pnpm start:regular-node"
     ports:
-      - '3004:3004'
+      - '12390:12390'
+    volumes:
+      - ./downloads:./downloads
     restart: unless-stopped
-
-  execution_server:
-    env_file: .execution_server.env
-    build: .
-
-    environment:
-      TZ: Europe/Moscow
-
-    command: sh -c "pnpm build && pnpm start:eserver:prod"
-    ports:
-      - '3005:3005'
-    restart: unless-stopped
-
-  landing:
-    env_file: .landing.env
-    build: .
-    command: sh -c "pnpm build && pnpm start:landing:prod"
-    ports:
-      - '3007:3007'
-    restart: unless-stopped
-
-    environment:
-      TZ: Europe/Moscow
-
-    # volumes:
-    #   - ./playground/workspace:/workspace
-
-    # healthcheck:
-    #   test: wget -S -O- http://api_server:3040/health-api/health || exit 1
-    #   interval: 5m
-    #   timeout: 5m
-    #   retries: 3
-    # depends_on:
-    #   - autoheal
