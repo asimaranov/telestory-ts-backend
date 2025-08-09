@@ -19,5 +19,5 @@ services:
     ports:
       - '12390:12390'
     volumes:
-      - ./downloads:./downloads
+      - ./downloads:/telestory-ts-backend/downloads
     restart: unless-stopped
