@@ -20,7 +20,6 @@ import { AccountsModule } from '../accounts/accounts.module.js';
         maxRedirects: 5,
       }),
     }),
-    forwardRef(() => AccountsModule),
   ],
   controllers: [],
   providers: [TelestoryNodesService],
