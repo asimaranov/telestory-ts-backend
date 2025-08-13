@@ -9,6 +9,7 @@ import { RegularNodeAccountsController } from '../accounts/regular-node/accounts
 import { DownloaderServiceModule } from '../downloader/downloader.module.js';
 import { DownloaderController } from '../downloader/downloader.controller.js';
 import { ServerInfoModule } from '../server-info/server-info.module.js';
+import { AppController } from '../app.controller.js';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { ServerInfoModule } from '../server-info/server-info.module.js';
     ServerInfoModule,
     MongooseModule.forRoot(process.env.MONGODB_URI!),
   ],
-  controllers: [RegularNodeAccountsController, DownloaderController],
+  controllers: [AppController, RegularNodeAccountsController, DownloaderController],
   providers: [],
 })
 export class RegularNodeModule {}
