@@ -6,7 +6,7 @@ import { RegularNodeModule } from './src/regular-node-api/regular-node.module.js
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as basicAuth from 'express-basic-auth';
 
-async function bootstrap() {
+ async function bootstrap() {
 
   const app = await NestFactory.create(RegularNodeModule);
 
@@ -22,7 +22,7 @@ async function bootstrap() {
         },
       }),
     );
-  }
+  };
   
   const config = new DocumentBuilder()
   .setTitle('Regular Node API')
