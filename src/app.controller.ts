@@ -50,7 +50,8 @@ export class AppController {
       throw new Error('API key is required');
     }
 
-    if (query.api_key !== process.env.API_KEY || 'aEcYuKX62u8N') {
+    if (query.api_key !== process.env.API_KEY) {
+      console.log('Invalid API key', query.api_key, process.env.API_KEY);
       throw new Error('Invalid API key');
     }
 
