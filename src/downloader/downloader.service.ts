@@ -296,7 +296,13 @@ export class DownloaderService implements OnModuleInit {
     });
 
     if (usersQuery.users.length === 0) {
-      throw new Error('Username not found 1');
+      await this.invalidUsernames.create({
+        username,
+        lastChecked: new Date(),
+      });
+      throw new Error('USERNAME_NOT_OCCUPIED', {
+        cause: 'No users with this username found',
+      });
     }
 
     for (const user of usersQuery.users) {
@@ -320,7 +326,13 @@ export class DownloaderService implements OnModuleInit {
         }
       }
     }
-    throw new Error('Username not found 3');
+    await this.invalidUsernames.create({
+      username,
+      lastChecked: new Date(),
+    });
+    throw new Error('USERNAME_NOT_OCCUPIED', {
+      cause: 'Queried users username not matched',
+    });
   }
 
   private async getPinnedStories(tg: TelegramClient, peer: tl.RawUser) {
@@ -439,9 +451,10 @@ export class DownloaderService implements OnModuleInit {
     premium: boolean = false,
   ) {
     // Check cache for non-premium users (skip cache for premium users and markAsRead requests)
-    if (!premium && !markAsRead) {
-      const cacheKey = this.generateCacheKey(username, archive, storyIds);
 
+    const cacheKey = this.generateCacheKey(username, archive, storyIds);
+
+    if (!premium && !markAsRead) {
       try {
         const cachedData = await this.storiesCache.findOne({
           cacheKey,
@@ -450,7 +463,12 @@ export class DownloaderService implements OnModuleInit {
 
         if (cachedData) {
           console.log('Returning cached stories for username:', username);
-          return cachedData.storiesData;
+          return {
+            ok: true,
+            username: username,
+            stories: cachedData.storiesData,
+            never_created: cachedData.neverCreated,
+          };
         }
       } catch (error) {
         console.warn('Cache lookup failed:', error);
@@ -464,6 +482,7 @@ export class DownloaderService implements OnModuleInit {
     try {
       return await mutex.runExclusive(async () => {
         let resolvedPeer: tl.RawUser | null = null;
+
         if (username.match(/^\d+$/)) {
           resolvedPeer = await this.resolvePeerByPhone(tg, username);
         } else {
@@ -476,7 +495,7 @@ export class DownloaderService implements OnModuleInit {
             invalidUsernameCache.lastChecked.getTime() + 1000 * 60 * 60 * 48 >
               Date.now()
           ) {
-            throw new Error('Invalid username');
+            throw new Error('USERNAME_NOT_OCCUPIED');
           }
           resolvedPeer = await this.resolvePeerByUsername(
             tg,
@@ -487,7 +506,7 @@ export class DownloaderService implements OnModuleInit {
 
         if (resolvedPeer.status === undefined) {
           console.log('Account is banned by user');
-          throw new Error('Account is banned by user');
+          throw new Error('ACCOUNT_BANNED_BY_USER');
         }
 
         console.log('Resolved peer', resolvedPeer);
@@ -541,6 +560,27 @@ export class DownloaderService implements OnModuleInit {
           }
         } catch (error) {
           console.error('Error marking stories as read:', error);
+          if (error?.message === 'STORIES_NEVER_CREATED') {
+            // Save to cache with 10-minute expiration
+            await this.storiesCache.findOneAndUpdate(
+              { cacheKey },
+              {
+                username: username.toLowerCase(),
+                storiesData: [],
+                expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
+                cacheKey,
+                neverCreated: true,
+              },
+              { upsert: true, new: true },
+            );
+
+            return {
+              ok: true,
+              username: username,
+              stories: [],
+              never_created: true,
+            };
+          }
         }
 
         const skippedStories = stories.filter(
@@ -633,8 +673,6 @@ export class DownloaderService implements OnModuleInit {
 
         // Cache the results for non-premium users (skip cache for premium users and markAsRead requests)
         if (!premium && !markAsRead && media.length > 0) {
-          const cacheKey = this.generateCacheKey(username, archive, storyIds);
-
           try {
             // Save to cache with 10-minute expiration
             await this.storiesCache.findOneAndUpdate(
@@ -644,6 +682,7 @@ export class DownloaderService implements OnModuleInit {
                 storiesData: media,
                 expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
                 cacheKey,
+                never_created: false,
               },
               { upsert: true, new: true },
             );
@@ -659,7 +698,7 @@ export class DownloaderService implements OnModuleInit {
           username: username,
           stories: media,
           never_created: false,
-        }
+        };
       });
     } catch (error) {
       console.error(error);

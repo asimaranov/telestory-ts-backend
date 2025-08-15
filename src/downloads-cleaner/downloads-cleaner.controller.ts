@@ -5,7 +5,9 @@ import { DownloadsCleanerService } from './downloads-cleaner.service';
 @ApiTags('Downloads Cleaner')
 @Controller('downloads-cleaner')
 export class DownloadsCleanerController {
-  constructor(private readonly downloadsCleanerService: DownloadsCleanerService) {}
+  constructor(
+    private readonly downloadsCleanerService: DownloadsCleanerService,
+  ) {}
 
   @Get('stats')
   @ApiOperation({ summary: 'Get downloads directory statistics' })
@@ -17,17 +19,43 @@ export class DownloadsCleanerController {
       properties: {
         totalFiles: { type: 'number', description: 'Total number of files' },
         totalSize: { type: 'number', description: 'Total size in bytes' },
-        totalSizeFormatted: { type: 'string', description: 'Total size in human-readable format' },
-        oldestFile: { type: 'string', format: 'date-time', description: 'Date of oldest file' },
-        newestFile: { type: 'string', format: 'date-time', description: 'Date of newest file' },
+        totalSizeFormatted: {
+          type: 'string',
+          description: 'Total size in human-readable format',
+        },
+        oldestFile: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Date of oldest file',
+        },
+        newestFile: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Date of newest file',
+        },
         diskSpace: {
           type: 'object',
           properties: {
-            totalSpace: { type: 'number', description: 'Total disk space in bytes' },
-            freeSpace: { type: 'number', description: 'Free disk space in bytes' },
-            freeSpacePercent: { type: 'number', description: 'Free disk space percentage' },
-            totalSpaceFormatted: { type: 'string', description: 'Total disk space in human-readable format' },
-            freeSpaceFormatted: { type: 'string', description: 'Free disk space in human-readable format' },
+            totalSpace: {
+              type: 'number',
+              description: 'Total disk space in bytes',
+            },
+            freeSpace: {
+              type: 'number',
+              description: 'Free disk space in bytes',
+            },
+            freeSpacePercent: {
+              type: 'number',
+              description: 'Free disk space percentage',
+            },
+            totalSpaceFormatted: {
+              type: 'string',
+              description: 'Total disk space in human-readable format',
+            },
+            freeSpaceFormatted: {
+              type: 'string',
+              description: 'Free disk space in human-readable format',
+            },
           },
         },
       },
@@ -35,7 +63,7 @@ export class DownloadsCleanerController {
   })
   async getStats() {
     const stats = await this.downloadsCleanerService.getCleanupStats();
-    
+
     return {
       ...stats,
       totalSizeFormatted: this.formatBytes(stats.totalSize),
@@ -56,17 +84,26 @@ export class DownloadsCleanerController {
     schema: {
       type: 'object',
       properties: {
-        filesRemoved: { type: 'number', description: 'Number of files removed' },
-        foldersRemoved: { type: 'number', description: 'Number of folders removed' },
+        filesRemoved: {
+          type: 'number',
+          description: 'Number of files removed',
+        },
+        foldersRemoved: {
+          type: 'number',
+          description: 'Number of folders removed',
+        },
         spaceFreed: { type: 'number', description: 'Space freed in bytes' },
-        spaceFreedFormatted: { type: 'string', description: 'Space freed in human-readable format' },
+        spaceFreedFormatted: {
+          type: 'string',
+          description: 'Space freed in human-readable format',
+        },
         reason: { type: 'string', description: 'Reason for cleanup' },
       },
     },
   })
   async triggerCleanup() {
     const result = await this.downloadsCleanerService.performCleanup();
-    
+
     return {
       ...result,
       spaceFreedFormatted: this.formatBytes(result.spaceFreed),
@@ -78,10 +115,10 @@ export class DownloadsCleanerController {
    */
   private formatBytes(bytes: number): string {
     if (bytes === 0) return '0 B';
-    
+
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   }
 }

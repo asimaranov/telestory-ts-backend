@@ -52,6 +52,13 @@ export class BaseStoriesCacheDocument extends Document {
     required: true,
   })
   cacheKey: string;
+
+  @Prop({
+    type: Boolean,
+    required: true,
+    default: false,
+  })
+  neverCreated: boolean;
 }
 
 @Schema({ timestamps: true, collection: 'stories_cache' })
