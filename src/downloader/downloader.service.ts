@@ -654,11 +654,20 @@ export class DownloaderService implements OnModuleInit {
           }
         }
 
-        return media;
+        return {
+          ok: true,
+          username: username,
+          stories: media,
+          never_created: false,
+        }
       });
     } catch (error) {
       console.error(error);
-      return []; // Return empty array on error
+      return {
+        ok: false,
+        error: error?.message || JSON.stringify(error),
+        error_debug: JSON.stringify(error),
+      }; // Return empty array on error
     }
   }
 }
