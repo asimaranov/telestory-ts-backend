@@ -444,7 +444,7 @@ export class DownloaderService implements OnModuleInit {
           )) as unknown as tl.TypeStoryItem[];
         }
 
-        if (storyIds.length > 0 && markAsRead) {
+        if (markAsRead) {
           await tg.call({
             _: 'stories.readStories',
             maxId: 2 ** 16 - 1,
