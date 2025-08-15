@@ -485,6 +485,8 @@ export class DownloaderService implements OnModuleInit {
           );
         }
 
+        console.log('Resolved peer', resolvedPeer);
+
         let stories: tl.TypeStoryItem[] = [];
 
         if (archive) {
