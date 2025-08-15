@@ -706,8 +706,8 @@ export class DownloaderService implements OnModuleInit {
       console.error(error);
       return {
         ok: false,
-        error: error?.message || error,
-        error_debug: error?.cause || error,
+        error: error?.message || JSON.stringify(error),
+        error_debug: error?.cause || JSON.stringify(error),
       };
     }
   }
