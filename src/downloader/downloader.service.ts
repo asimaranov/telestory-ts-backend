@@ -495,7 +495,9 @@ export class DownloaderService implements OnModuleInit {
             invalidUsernameCache.lastChecked.getTime() + 1000 * 60 * 60 * 48 >
               Date.now()
           ) {
-            throw new Error('USERNAME_NOT_OCCUPIED');
+            throw new Error('USERNAME_NOT_OCCUPIED', {
+              cause: 'Cached username not occupied',
+            });
           }
           resolvedPeer = await this.resolvePeerByUsername(
             tg,
@@ -706,7 +708,7 @@ export class DownloaderService implements OnModuleInit {
         ok: false,
         error: error?.message || error,
         error_debug: error?.cause || error,
-      }; // Return empty array on error
+      };
     }
   }
 }
