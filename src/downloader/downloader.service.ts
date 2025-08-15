@@ -485,6 +485,11 @@ export class DownloaderService implements OnModuleInit {
           );
         }
 
+        if (resolvedPeer.status === undefined) {
+          console.log('Account is banned by user');
+          throw new Error('Account is banned by user');
+        }
+
         console.log('Resolved peer', resolvedPeer);
 
         let stories: tl.TypeStoryItem[] = [];
