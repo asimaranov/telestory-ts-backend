@@ -507,17 +507,33 @@ export class DownloaderService implements OnModuleInit {
 
         console.log('Mark as read', markAsRead);
 
-        if (markAsRead) {
-          const markAsReadResponse = await tg.call({
-            _: 'stories.readStories',
-            maxId: 2 ** 16 - 1,
-            peer: {
-              _: 'inputPeerUser',
-              userId: resolvedPeer.id,
-              accessHash: resolvedPeer.accessHash!,
-            },
-          });
-          console.log('Mark as read response', markAsReadResponse);
+        try {
+          if (markAsRead) {
+            if (archive) {
+              const incrementStoryViews = await tg.call({
+                _: 'stories.incrementStoryViews',
+                id: stories.map((story) => story.id),
+                peer: {
+                  _: 'inputPeerUser',
+                  userId: resolvedPeer.id,
+                  accessHash: resolvedPeer.accessHash!,
+                },
+              });
+              console.log('Increment story views', incrementStoryViews);
+            } else {
+              await tg.call({
+                _: 'stories.readStories',
+                maxId: 2 ** 16 - 1,
+                peer: {
+                  _: 'inputPeerUser',
+                  userId: resolvedPeer.id,
+                  accessHash: resolvedPeer.accessHash!,
+                },
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error marking stories as read:', error);
         }
 
         const skippedStories = stories.filter(
