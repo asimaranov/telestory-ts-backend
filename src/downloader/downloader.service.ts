@@ -445,7 +445,7 @@ export class DownloaderService implements OnModuleInit {
         }
 
         if (markAsRead) {
-          await tg.call({
+          const markAsReadResponse = await tg.call({
             _: 'stories.readStories',
             maxId: 2 ** 16 - 1,
             peer: {
@@ -454,6 +454,7 @@ export class DownloaderService implements OnModuleInit {
               accessHash: resolvedPeer.accessHash!,
             },
           });
+          console.log('Mark as read response', markAsReadResponse);
         }
 
         const skippedStories = stories.filter(
