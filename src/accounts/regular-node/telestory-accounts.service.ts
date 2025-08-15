@@ -7,6 +7,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
+import { Dispatcher } from '@mtcute/dispatcher';
+import { message } from '@mtcute/core/utils/links/chat.js';
 
 @Injectable()
 export class TelestoryAccountsService implements OnModuleInit {
@@ -45,6 +47,16 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       await tg.importSession(account.sessionData);
+
+      const dp = Dispatcher.for(tg);
+
+      dp.onNewMessage(async (msg) => {
+        console.log('New message on account', account.name, msg);
+        if (msg.isOutgoing) {
+          return;
+        }
+        await msg.answerText('Привет. Я один из тайных агентов @tele_story_bot. Если ты заметил меня в своих просмотрах, значит кто-то неравнодушен к твоей жизни. Хочешь узнать кто? Переходи в бота 👈');
+      });
 
       try {
         const self = await tg.start();

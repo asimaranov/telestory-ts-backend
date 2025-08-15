@@ -14,6 +14,9 @@ importers:
       '@mtcute/core':
         specifier: ^0.25.7
         version: 0.25.7
+      '@mtcute/dispatcher':
+        specifier: ^0.25.7
+        version: 0.25.7
       '@mtcute/node':
         specifier: ^0.25.2
         version: 0.25.2
@@ -694,6 +697,9 @@ packages:
 
   '@mtcute/core@0.25.7':
     resolution: {integrity: sha512-aE4aeALX9QMzPkaDk0IRs7gLQqCtqYd0XnysgaNZuZyVgPH8HgyX/AKJUNUeoOfnGZuvPbTZY5qVsBT7xKF6jw==}
+
+  '@mtcute/dispatcher@0.25.7':
+    resolution: {integrity: sha512-u9ZCIoX++PIMxqlhzXINADU6tHQsRNPXtxRAucc/nJo9aYE16/wbcvYB864obDE0tOX5qzdOiTul6NZt9eNzdw==}
 
   '@mtcute/file-id@0.24.3':
     resolution: {integrity: sha512-E00JsYonLZ2z5pzfbfmAuIz3+Fn60xliOn8SCRk6Qhht4aMWbJAkehkqhsmlWsM4C64hQvW8IHqinl9LVJyOLA==}
@@ -4504,6 +4510,11 @@ snapshots:
       '@mtcute/tl-runtime': 0.24.3
       '@types/events': 3.0.0
       long: 5.2.3
+
+  '@mtcute/dispatcher@0.25.7':
+    dependencies:
+      '@fuman/utils': 0.0.15
+      '@mtcute/core': 0.25.7
 
   '@mtcute/file-id@0.24.3':
     dependencies:

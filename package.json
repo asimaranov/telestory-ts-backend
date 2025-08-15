@@ -24,6 +24,7 @@
   "dependencies": {
     "@mtcute/convert": "^0.25.0",
     "@mtcute/core": "^0.25.7",
+    "@mtcute/dispatcher": "^0.25.7",
     "@mtcute/node": "^0.25.2",
     "@mtcute/tl": "^211.0.0",
     "@nestjs/axios": "^4.0.0",

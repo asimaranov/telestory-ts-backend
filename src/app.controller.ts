@@ -26,16 +26,41 @@ export class AppController {
   }
 
   @Get('get_stories_by_username')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get stories by username',
-    description: 'Retrieves stories for a given username with optional parameters for archive, marking as read, and premium features'
+    description:
+      'Retrieves stories for a given username with optional parameters for archive, marking as read, and premium features',
   })
-  @ApiQuery({ name: 'api_key', description: 'API key for authentication', required: true })
-  @ApiQuery({ name: 'username', description: 'Username to get stories for', required: true })
-  @ApiQuery({ name: 'archive', description: 'Whether to get archived/pinned stories', required: false })
-  @ApiQuery({ name: 'mark', description: 'Whether to mark stories as read', required: false })
-  @ApiQuery({ name: 'premium', description: 'Whether to use premium features', required: false })
-  @ApiQuery({ name: 'story_ids', description: 'Story IDs to get', required: false })
+  @ApiQuery({
+    name: 'api_key',
+    description: 'API key for authentication',
+    required: true,
+  })
+  @ApiQuery({
+    name: 'username',
+    description: 'Username to get stories for',
+    required: true,
+  })
+  @ApiQuery({
+    name: 'archive',
+    description: 'Whether to get archived/pinned stories',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'mark',
+    description: 'Whether to mark stories as read',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'premium',
+    description: 'Whether to use premium features',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'story_ids',
+    description: 'Story IDs to get',
+    required: false,
+  })
   @ApiResponse({ status: 200, description: 'Stories retrieved successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   async getStoriesByUsername(@Query() query: GetStoriesByUsernameQueryDto) {
