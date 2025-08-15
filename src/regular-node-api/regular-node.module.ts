@@ -11,7 +11,7 @@ import { DownloaderController } from '../downloader/downloader.controller.js';
 import { ServerInfoModule } from '../server-info/server-info.module.js';
 import { AppController } from '../app.controller.js';
 import { AppService } from '../app.service.js';
-import { DownloadsCleanerModule } from '@/downloads-cleaner/downloads-cleaner.module.js';
+import { DownloadsCleanerModule } from '../downloads-cleaner/downloads-cleaner.module.js';
 
 @Module({
   imports: [
