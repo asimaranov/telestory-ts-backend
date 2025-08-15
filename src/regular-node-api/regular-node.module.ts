@@ -11,6 +11,7 @@ import { DownloaderController } from '../downloader/downloader.controller.js';
 import { ServerInfoModule } from '../server-info/server-info.module.js';
 import { AppController } from '../app.controller.js';
 import { AppService } from '../app.service.js';
+import { DownloadsCleanerModule } from '@/downloads-cleaner/downloads-cleaner.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AppService } from '../app.service.js';
     NodesModule,
     DownloadsStatsModule,
     DownloaderServiceModule,
+    DownloadsCleanerModule,
     ServerInfoModule,
     MongooseModule.forRoot(process.env.MONGODB_URI!),
   ],
