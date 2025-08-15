@@ -5,7 +5,10 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Photo, TelegramClient, Video } from '@mtcute/node';
 import { TelestoryNodesService } from '../nodes/nodes.service.js';
-import { InvalidUsernamesData } from './schema/downloader.schema.js';
+import {
+  InvalidUsernamesData,
+  StoriesCacheData,
+} from './schema/downloader.schema.js';
 import { TelestoryAccountData } from '../accounts/schema/telestory-account.schema.js';
 import { TelestoryAccountsService } from '../accounts/regular-node/telestory-accounts.service.js';
 import { tl } from '@mtcute/node';
@@ -74,6 +77,8 @@ export class DownloaderService implements OnModuleInit {
     private telestoryAccountsService: TelestoryAccountsService,
     @InjectModel(InvalidUsernamesData.name)
     private invalidUsernames: Model<InvalidUsernamesData>,
+    @InjectModel(StoriesCacheData.name)
+    private storiesCache: Model<StoriesCacheData>,
   ) {}
 
   async onModuleInit() {
@@ -83,7 +88,27 @@ export class DownloaderService implements OnModuleInit {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    // Clean up expired cache entries on startup
+    await this.cleanupExpiredCache();
+
     this.initialized = true;
+  }
+
+  /**
+   * Manual cleanup method for expired cache entries
+   * MongoDB TTL index should handle this automatically, but this provides a fallback
+   */
+  async cleanupExpiredCache(): Promise<void> {
+    try {
+      const result = await this.storiesCache.deleteMany({
+        expiresAt: { $lt: new Date() },
+      });
+      if (result.deletedCount > 0) {
+        console.log(`Cleaned up ${result.deletedCount} expired cache entries`);
+      }
+    } catch (error) {
+      console.warn('Failed to cleanup expired cache entries:', error);
+    }
   }
 
   /**
@@ -91,6 +116,22 @@ export class DownloaderService implements OnModuleInit {
    */
   private rndId(): string {
     return randomBytes(4).toString('hex');
+  }
+
+  /**
+   * Generates a cache key for stories based on username and request parameters
+   */
+  private generateCacheKey(
+    username: string,
+    archive: boolean,
+    storyIds: string[],
+  ): string {
+    const params = {
+      username: username.toLowerCase(),
+      archive,
+      storyIds: storyIds.sort(),
+    };
+    return `stories_${Buffer.from(JSON.stringify(params)).toString('base64')}`;
   }
 
   /**
@@ -346,15 +387,15 @@ export class DownloaderService implements OnModuleInit {
       const media = story.media;
 
       const meta = {
-        'public': story.public || false,
-        'close_friends': story.closeFriends || false,
-        'noforwards': story.noforwards || false,
-        'edited': story.edited || false,
-        'date': story.date,
-        'expire_date': story.expireDate,
-        'caption': story.caption || '',
-        'pinned': story.pinned || false,
-    }
+        public: story.public || false,
+        close_friends: story.closeFriends || false,
+        noforwards: story.noforwards || false,
+        edited: story.edited || false,
+        date: story.date,
+        expire_date: story.expireDate,
+        caption: story.caption || '',
+        pinned: story.pinned || false,
+      };
 
       if (media._ === 'messageMediaPhoto') {
         const photo = media as tl.RawMessageMediaPhoto;
@@ -397,6 +438,26 @@ export class DownloaderService implements OnModuleInit {
     storyIds: string[] = [],
     premium: boolean = false,
   ) {
+    // Check cache for non-premium users (skip cache for premium users and markAsRead requests)
+    if (!premium && !markAsRead) {
+      const cacheKey = this.generateCacheKey(username, archive, storyIds);
+
+      try {
+        const cachedData = await this.storiesCache.findOne({
+          cacheKey,
+          expiresAt: { $gt: new Date() },
+        });
+
+        if (cachedData) {
+          console.log('Returning cached stories for username:', username);
+          return cachedData.storiesData;
+        }
+      } catch (error) {
+        console.warn('Cache lookup failed:', error);
+        // Continue with normal flow if cache fails
+      }
+    }
+
     const { account: tg, mutex } =
       await this.telestoryAccountsService.getNextAccount();
 
@@ -443,6 +504,8 @@ export class DownloaderService implements OnModuleInit {
             resolvedPeer,
           )) as unknown as tl.TypeStoryItem[];
         }
+
+        console.log('Mark as read', markAsRead);
 
         if (markAsRead) {
           const markAsReadResponse = await tg.call({
@@ -544,6 +607,30 @@ export class DownloaderService implements OnModuleInit {
           });
           console.log('Log 3:', storyFilePath);
         }
+
+        // Cache the results for non-premium users (skip cache for premium users and markAsRead requests)
+        if (!premium && !markAsRead && media.length > 0) {
+          const cacheKey = this.generateCacheKey(username, archive, storyIds);
+
+          try {
+            // Save to cache with 10-minute expiration
+            await this.storiesCache.findOneAndUpdate(
+              { cacheKey },
+              {
+                username: username.toLowerCase(),
+                storiesData: media,
+                expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
+                cacheKey,
+              },
+              { upsert: true, new: true },
+            );
+            console.log('Cached stories for username:', username);
+          } catch (error) {
+            console.warn('Cache storage failed:', error);
+            // Continue with normal flow if cache fails
+          }
+        }
+
         return media;
       });
     } catch (error) {

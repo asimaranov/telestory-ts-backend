@@ -7,6 +7,8 @@ import { AccountsModule } from '../accounts/accounts.module.js';
 import {
   InvalidUsernamesData,
   InvalidUsernamesDataSchema,
+  StoriesCacheData,
+  StoriesCacheDataSchema,
 } from './schema/downloader.schema.js';
 import {
   TelestoryAccountData,
@@ -18,6 +20,7 @@ import {
     MongooseModule.forFeature([
       { name: InvalidUsernamesData.name, schema: InvalidUsernamesDataSchema },
       { name: TelestoryAccountData.name, schema: TelestoryAccountDataSchema },
+      { name: StoriesCacheData.name, schema: StoriesCacheDataSchema },
     ]),
     NodesModule,
     AccountsModule,
