@@ -86,18 +86,16 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     if (process.env.BOT_TOKEN) {
       await botClient.start({
-        botToken:
-          process.env.BOT_TOKEN,
+        botToken: process.env.BOT_TOKEN,
       });
 
       const dp = Dispatcher.for(botClient);
 
       dp.onNewMessage(filters.command('start'), async (msg) => {
-        if (msg.command[1] === 'from_inline') {
-          await msg.answerText(
-            'Аккаунты воркают: ' +
-              accounts.length +
-              `\n\n
+        await msg.answerText(
+          'Аккаунты воркают: ' +
+            accounts.length +
+            `\n\n
             ${Array.from(accounts)
               .filter((account) => {
                 return account.isActive;
@@ -124,8 +122,7 @@ export class TelestoryAccountsService implements OnModuleInit {
               })
               .join('\n')}
             `,
-          );
-        }
+        );
       });
     }
 
