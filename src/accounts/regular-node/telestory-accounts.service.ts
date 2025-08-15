@@ -7,7 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
-import { Dispatcher } from '@mtcute/dispatcher';
+import { Dispatcher, filters } from '@mtcute/dispatcher';
 import { message } from '@mtcute/core/utils/links/chat.js';
 
 @Injectable()
@@ -55,7 +55,9 @@ export class TelestoryAccountsService implements OnModuleInit {
         if (msg.isOutgoing) {
           return;
         }
-        await msg.answerText('Привет. Я один из тайных агентов @tele_story_bot. Если ты заметил меня в своих просмотрах, значит кто-то неравнодушен к твоей жизни. Хочешь узнать кто? Переходи в бота 👈');
+        await msg.answerText(
+          'Привет. Я один из тайных агентов @tele_story_bot. Если ты заметил меня в своих просмотрах, значит кто-то неравнодушен к твоей жизни. Хочешь узнать кто? Переходи в бота 👈',
+        );
       });
 
       try {
@@ -67,15 +69,64 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.error(
           `Error importing session for account ${account.name}: ${error}`,
         );
-        await this.telestoryAccountData.updateOne(
-          { _id: account._id },
-          { $set: { isActive: false, inactiveReason: error.message } },
-        );
+        account.isActive = false;
+        account.inactiveReason = error.message;
+        await account.save();
         continue;
       }
 
       this.accounts.set(account.name, tg);
       this.accountMutexes.set(account.name, new Mutex());
+    }
+
+    const botClient = new TelegramClient({
+      apiId: Number(process.env.API_ID),
+      apiHash: process.env.API_HASH!,
+    });
+
+    if (process.env.BOT_TOKEN) {
+      await botClient.start({
+        botToken:
+          process.env.BOT_TOKEN,
+      });
+
+      const dp = Dispatcher.for(botClient);
+
+      dp.onNewMessage(filters.command('start'), async (msg) => {
+        if (msg.command[1] === 'from_inline') {
+          await msg.answerText(
+            'Аккаунты воркают: ' +
+              accounts.length +
+              `\n\n
+            ${Array.from(accounts)
+              .filter((account) => {
+                return account.isActive;
+              })
+              .map((account) => {
+                const accountData = this.accounts.get(account.name);
+
+                return `
+                ${account.name} ${account.bindNodeId}
+              `;
+              })
+              .join('\n')}
+
+            Аккаунты не воркают: ${accounts.length - this.accounts.size}
+
+            ${Array.from(accounts)
+              .filter((account) => {
+                return !account.isActive;
+              })
+              .map((account) => {
+                return `
+                ${account.name} ${account.bindNodeId}
+              `;
+              })
+              .join('\n')}
+            `,
+          );
+        }
+      });
     }
 
     this.initialized = true;
