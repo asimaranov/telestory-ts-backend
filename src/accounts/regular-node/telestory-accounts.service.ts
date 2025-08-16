@@ -16,6 +16,7 @@ export class TelestoryAccountsService implements OnModuleInit {
   accounts = new Map<string, TelegramClient>();
   accountMutexes = new Map<string, Mutex>();
   accountsCounter = 0;
+  botClient: TelegramClient;
 
   constructor(
     private telestoryNodesService: TelestoryNodesService,
@@ -79,27 +80,27 @@ export class TelestoryAccountsService implements OnModuleInit {
       this.accountMutexes.set(account.name, new Mutex());
     }
 
-    const botClient = new TelegramClient({
+    this.botClient = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
     });
 
     if (process.env.BOT_TOKEN) {
       console.log('Starting bot client');
-      await botClient.start({
+      await this.botClient.start({
         botToken: process.env.BOT_TOKEN,
       });
 
       console.log('Bot client started');
 
-      const dp = Dispatcher.for(botClient);
+      const botDp = Dispatcher.for(this.botClient);
 
-      dp.onNewMessage(async (msg) => {
+      botDp.onNewMessage(async (msg) => {
         console.log('New message on bot', msg);
         await msg.answerText('Hello from bot');
       });
 
-      dp.onNewMessage(filters.command('start'), async (msg) => {
+      botDp.onNewMessage(filters.command('start'), async (msg) => {
         console.log('New message on bot', msg);
         await msg.answerText(
           'Аккаунты воркают: ' +
@@ -110,8 +111,6 @@ export class TelestoryAccountsService implements OnModuleInit {
                 return account.isActive;
               })
               .map((account) => {
-                const accountData = this.accounts.get(account.name);
-
                 return `
                 ${account.name} ${account.bindNodeId}
               `;
