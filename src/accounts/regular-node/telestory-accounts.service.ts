@@ -97,7 +97,7 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       botDp.onNewMessage(async (msg) => {
         console.log('New message on bot', msg);
-        await msg.answerText(`Hello from bot on server ${process.env.NODE_ID}. Bot client id: ${JSON.stringify(await this.botClient.getMe())}`);
+        await msg.answerText(`Hello from bot on server ${process.env.NODE_ID}. Bot token: ${process.env.BOT_TOKEN}. Bot client id: ${JSON.stringify(await this.botClient.getMe())}`);
       });
 
       botDp.onNewMessage(filters.command('start'), async (msg) => {
