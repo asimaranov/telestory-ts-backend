@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@mtcute/convert':
-        specifier: ^0.25.0
-        version: 0.25.0(@mtcute/node@0.25.2)
+        specifier: ^0.25.7
+        version: 0.25.7(@mtcute/node@0.25.7)
       '@mtcute/core':
         specifier: ^0.25.7
         version: 0.25.7
@@ -18,8 +18,8 @@ importers:
         specifier: ^0.25.7
         version: 0.25.7
       '@mtcute/node':
-        specifier: ^0.25.2
-        version: 0.25.2
+        specifier: ^0.25.7
+        version: 0.25.7
       '@mtcute/tl':
         specifier: ^211.0.0
         version: 211.0.0
@@ -687,10 +687,10 @@ packages:
   '@mongodb-js/saslprep@1.3.0':
     resolution: {integrity: sha512-zlayKCsIjYb7/IdfqxorK5+xUMyi4vOKcFy10wKJYc63NSdKI8mNME+uJqfatkPmOSMMUiojrL58IePKBm3gvQ==}
 
-  '@mtcute/convert@0.25.0':
-    resolution: {integrity: sha512-RqCeop2s42TGH8gGa29KWG4RTEiWM34BESJAa8p3gvwjZFISpwqYk54ZRxGkRL0WUxTp71DyBDCC/jOaGniYvA==}
+  '@mtcute/convert@0.25.7':
+    resolution: {integrity: sha512-3icbJfblwcTyNzz3AiznW00M9CgTK8NXNvBnngzglzG6wdeEugZ2bawvqVXzgtxp2rYLuvdDLj60WRKfgOKAfg==}
     peerDependencies:
-      '@mtcute/node': ^0.25.0
+      '@mtcute/node': ^0.25.7
     peerDependenciesMeta:
       '@mtcute/node':
         optional: true
@@ -704,14 +704,14 @@ packages:
   '@mtcute/file-id@0.24.3':
     resolution: {integrity: sha512-E00JsYonLZ2z5pzfbfmAuIz3+Fn60xliOn8SCRk6Qhht4aMWbJAkehkqhsmlWsM4C64hQvW8IHqinl9LVJyOLA==}
 
-  '@mtcute/html-parser@0.25.0':
-    resolution: {integrity: sha512-n0v5uQ36Gjn16/fWJsJnhFvWPcmrP+wPVRxjYXzl06TDUil73ULBIHRdVEkDxg/IQ5rNtaiSncDX3FXoAHzeIw==}
+  '@mtcute/html-parser@0.25.7':
+    resolution: {integrity: sha512-Ms0zIjnSX0RHD3RxjXLAjXSVR1LyS2oEeKU4Zxu+u3LY2k3mO3klAZtwkwfJKJGfGuuP7EHafA4Cz2uUlZM4Lg==}
 
-  '@mtcute/markdown-parser@0.25.1':
-    resolution: {integrity: sha512-hiY0jOr/CqQJsw5ynzISUTXAVzUxOw93rTgx4aylWqnVQGy8unmZF5WtqSStbIAIqIQmB3rcWBoq+ZQkNqDBng==}
+  '@mtcute/markdown-parser@0.25.7':
+    resolution: {integrity: sha512-kPCKQkcHouZ5GscsuE5c/ajZW6G6XL8f42epY5zw9iWiJZNdhlHS9UFM3PO+bLGI39M/wIsrBJ4AGXpVxaV11A==}
 
-  '@mtcute/node@0.25.2':
-    resolution: {integrity: sha512-oWCeoamf7daEU+JYl9u+B1FTbCIndNKAVIRarbaIiwBnYpG6ikcaWe7WxEOS3Ffr/IoFVDNYTArrEwwsKu8rjg==}
+  '@mtcute/node@0.25.7':
+    resolution: {integrity: sha512-G0H9m0Xo49cA+keQFeH30/t8T1g1DAwpPpoDVBC0RnDxs6MpT0upw0hsgoahMyfzw1K2OOvaInRZivlpZ7bXcQ==}
 
   '@mtcute/tl-runtime@0.24.3':
     resolution: {integrity: sha512-61J3cgYgNOQT532GdIiuezRrSC7v6cc9MfvWv9GO27bRGf7JUKWVbFt4U0KzQ9Tp0J1uMOUfi1EbQKkYKacIKQ==}
@@ -4491,14 +4491,14 @@ snapshots:
     dependencies:
       sparse-bitfield: 3.0.3
 
-  '@mtcute/convert@0.25.0(@mtcute/node@0.25.2)':
+  '@mtcute/convert@0.25.7(@mtcute/node@0.25.7)':
     dependencies:
       '@fuman/io': 0.0.15
       '@fuman/net': 0.0.15
       '@fuman/utils': 0.0.15
       '@mtcute/core': 0.25.7
     optionalDependencies:
-      '@mtcute/node': 0.25.2
+      '@mtcute/node': 0.25.7
 
   '@mtcute/core@0.25.7':
     dependencies:
@@ -4522,25 +4522,25 @@ snapshots:
       '@mtcute/tl-runtime': 0.24.3
       long: 5.2.3
 
-  '@mtcute/html-parser@0.25.0':
+  '@mtcute/html-parser@0.25.7':
     dependencies:
       '@mtcute/core': 0.25.7
       htmlparser2: 10.0.0
       long: 5.2.3
 
-  '@mtcute/markdown-parser@0.25.1':
+  '@mtcute/markdown-parser@0.25.7':
     dependencies:
       '@mtcute/core': 0.25.7
       long: 5.2.3
 
-  '@mtcute/node@0.25.2':
+  '@mtcute/node@0.25.7':
     dependencies:
       '@fuman/net': 0.0.15
       '@fuman/node': 0.0.15
       '@fuman/utils': 0.0.15
       '@mtcute/core': 0.25.7
-      '@mtcute/html-parser': 0.25.0
-      '@mtcute/markdown-parser': 0.25.1
+      '@mtcute/html-parser': 0.25.7
+      '@mtcute/markdown-parser': 0.25.7
       '@mtcute/wasm': 0.24.3
       better-sqlite3: 11.3.0
     transitivePeerDependencies:
