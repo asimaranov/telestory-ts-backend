@@ -7,7 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
-import { Dispatcher, filters } from '@mtcute/dispatcher';
+import { CallbackDataBuilder, Dispatcher, filters } from '@mtcute/dispatcher';
 import { message } from '@mtcute/core/utils/links/chat.js';
 import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
@@ -18,6 +18,8 @@ interface AddAccountState {
   phone?: string;
   phoneCode?: string;
 }
+
+const ChooseNodeButton = new CallbackDataBuilder('choose_node', 'nodeId');
 
 @Injectable()
 export class TelestoryAccountsService implements OnModuleInit {
@@ -104,7 +106,34 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       console.log('Bot client started');
 
-      const botDp = Dispatcher.for(this.botClient);
+      const wizardScene = new WizardScene<AddAccountState>('add_account');
+
+      wizardScene.addStep(async (msg) => {
+        await msg.answerText('Введи имя аккаунта');
+
+        return WizardSceneAction.Next;
+      });
+
+      wizardScene.addStep(async (msg) => {
+        await msg.answerText('Введи номер телефона');
+
+        return WizardSceneAction.Next;
+      });
+
+      wizardScene.addStep(async (msg) => {
+        await msg.answerText('Введи код из СМС');
+
+        return WizardSceneAction.Next;
+      });
+
+      wizardScene.addStep(async (msg) => {
+        await msg.answerText('Аккаунт добавлен');
+
+        return WizardSceneAction.Exit;
+      });
+
+      const botDp = Dispatcher.scene<AddAccountState>('add_account');
+      botDp.bindToClient(this.botClient);
 
       // botDp.onNewMessage(async (msg) => {
       //   console.log('New message on bot', msg);
@@ -143,22 +172,36 @@ export class TelestoryAccountsService implements OnModuleInit {
         );
       });
 
-      botDp.onNewMessage((filters.command('add'), async (msg) => {
-        console.log('Service nodes', this.telestoryNodesService.nodes)
-        const nodes = Array.from(this.telestoryNodesService.nodes.values());
+      botDp.onNewMessage(
+        (filters.command('add'),
+        async (msg) => {
+          console.log('Service nodes', this.telestoryNodesService.nodes);
+          const nodes = Array.from(this.telestoryNodesService.nodes.values());
 
-        await msg.answerText(`Доступные ноды: ${nodes.length}`);
+          await msg.answerText(`Доступные ноды: ${nodes.length}`);
 
-        const nodesKeyboard = nodes.map((node) => {
-          return [BotKeyboard.callback(node.name, `/choose_node ${node.id.toString()}`)];
-        });
+          const nodesKeyboard = nodes.map((node) => {
+            return [
+              BotKeyboard.callback(
+                node.name,
+                ChooseNodeButton.build(node.id.toString()),
+              ),
+            ];
+          });
 
-        await msg.answerText('Выбери ноду', {
-          replyMarkup: BotKeyboard.inline(nodesKeyboard),
-        });
-      }))
+          await msg.answerText('Выбери ноду', {
+            replyMarkup: BotKeyboard.inline(nodesKeyboard),
+          });
+        }),
+      );
+
+      botDp.onCallbackQuery(ChooseNodeButton.filter(), async (query, state) => {
+        query.answer({});
+        console.log('Введи номер телефона');
+
+        state.enter(wizardScene);
+      });
     }
-    
 
     this.initialized = true;
   }
