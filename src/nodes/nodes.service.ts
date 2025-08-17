@@ -59,6 +59,8 @@ export class TelestoryNodesService implements OnModuleInit {
   async initialize(): Promise<void> {
     const nodes = await this.telestoryNodes.find({});
 
+    console.log('Fetched nodes', nodes)
+
     for (const node of nodes) {
       this.nodes.set(node.ip, node);
       this.nodeMutexes.set(node.ip, new Mutex());

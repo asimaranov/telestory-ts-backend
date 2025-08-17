@@ -144,7 +144,8 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       botDp.onNewMessage((filters.command('add'), async (msg) => {
-        const nodes = Object.values(this.telestoryNodesService.nodes)
+        console.log('Service nodes', this.telestoryNodesService.nodes)
+        const nodes = Array.from(this.telestoryNodesService.nodes.values());
 
         await msg.answerText(`Доступные ноды: ${nodes.length}`);
 
