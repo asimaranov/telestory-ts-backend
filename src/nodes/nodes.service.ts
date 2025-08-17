@@ -35,15 +35,21 @@ export class TelestoryNodesService implements OnModuleInit {
   }
 
   async masterCheckNode(node: TelestoryNodeData) {
-    const nodeResponse = await firstValueFrom(
-      this.httpService.get(`${node.apiUrl}/api/v1/node/stats`),
-    );
-    if (nodeResponse.status === 200) {
-      node.approvedByMasterNode = true;
-      node.lastActive = new Date();
-      await node.save();
-      return true;
-    } else {
+    try {
+      const nodeResponse = await firstValueFrom(
+        this.httpService.get(`${node.apiUrl}/api/v1/node/stats`),
+      );
+      if (nodeResponse.status === 200) {
+        node.approvedByMasterNode = true;
+        node.lastActive = new Date();
+        await node.save();
+        return true;
+      } else {
+        node.approvedByMasterNode = false;
+        await node.save();
+        return false;
+      }
+    } catch (e) {
       node.approvedByMasterNode = false;
       await node.save();
       return false;
@@ -85,10 +91,13 @@ export class TelestoryNodesService implements OnModuleInit {
       await newNode.save();
       node = newNode;
     }
-    for (const [name, node] of this.nodes) {
-      if (await this.masterCheckNode(node)) {
-        this.nodes.set(name, node);
-        this.nodeMutexes.set(name, new Mutex());
+
+    if (process.env.IS_MASTER_NODE) {
+      for (const [name, node] of this.nodes) {
+        if (await this.masterCheckNode(node)) {
+          this.nodes.set(name, node);
+          this.nodeMutexes.set(name, new Mutex());
+        }
       }
     }
 
