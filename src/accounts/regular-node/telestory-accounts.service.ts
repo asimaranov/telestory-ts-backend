@@ -81,18 +81,16 @@ export class TelestoryAccountsService implements OnModuleInit {
       this.accountMutexes.set(account.name, new Mutex());
     }
 
-
     if (process.env.BOT_TOKEN) {
       this.botClient = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
         storage: `session-bot-${process.env.BOT_TOKEN.split(':')[0]}`,
       });
-  
+
       console.log('Starting bot client');
       await this.botClient.start({
         botToken: process.env.BOT_TOKEN,
-        
       });
 
       console.log('Bot client started');
@@ -112,8 +110,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         await msg.answerText(
           'Аккаунты воркают: ' +
             accounts.length +
-            `\n\n
-            ${Array.from(accounts)
+            `\n\n${Array.from(accounts)
               .filter((account) => {
                 return account.isActive;
               })
@@ -122,9 +119,8 @@ export class TelestoryAccountsService implements OnModuleInit {
                 ${account.name} ${account.bindNodeId}
               `;
               })
-              .join('\n')}
-
-            Аккаунты не воркают: ${accounts.length - this.accounts.size}
+              .join('\n')}\n` +
+            `Аккаунты не воркают: ${accounts.length - this.accounts.size}
 
             ${Array.from(accounts)
               .filter((account) => {
@@ -148,8 +144,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
-      storage: `temp-${phone}`
-
+      storage: `temp-${phone}`,
     });
 
     const code = (await tg.sendCode({ phone })) as SentCode;
@@ -183,7 +178,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
-      storage: `temp-${phone}`
+      storage: `temp-${phone}`,
     });
 
     await tg.importSession(pendingAccount.sessionData);
