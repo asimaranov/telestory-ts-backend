@@ -108,16 +108,14 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.log('New message on bot', msg);
         await msg.answerText('Start command');
         await msg.answerText(
-          'Аккаунты воркают: ' +
+          'Аккаунты воркают:' +
             accounts.length +
             `\n\n${Array.from(accounts)
               .filter((account) => {
                 return account.isActive;
               })
               .map((account) => {
-                return `
-                ${account.name} ${account.bindNodeId}
-              `;
+                return `${account.name} ${account.bindNodeId}`;
               })
               .join('\n')}\n` +
             `Аккаунты не воркают: ${accounts.length - this.accounts.size}
