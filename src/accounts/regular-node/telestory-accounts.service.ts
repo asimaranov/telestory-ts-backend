@@ -9,7 +9,7 @@ import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
 import { Dispatcher, filters } from '@mtcute/dispatcher';
 import { message } from '@mtcute/core/utils/links/chat.js';
-import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher/wizard';
+import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
 
 interface AddAccountState {
