@@ -99,15 +99,16 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       const botDp = Dispatcher.for(this.botClient);
 
-      botDp.onNewMessage(async (msg) => {
-        console.log('New message on bot', msg);
-        await msg.answerText(
-          `Hello from bot on server ${process.env.NODE_ID}. Bot token: ${process.env.BOT_TOKEN}. Bot client id: ${JSON.stringify(await this.botClient.getMe())}`,
-        );
-      });
+      // botDp.onNewMessage(async (msg) => {
+      //   console.log('New message on bot', msg);
+      //   await msg.answerText(
+      //     `Hello from bot on server ${process.env.NODE_ID}. Bot token: ${process.env.BOT_TOKEN}. Bot client id: ${JSON.stringify(await this.botClient.getMe())}`,
+      //   );
+      // });
 
       botDp.onNewMessage(filters.command('start'), async (msg) => {
         console.log('New message on bot', msg);
+        await msg.answerText('Start command');
         await msg.answerText(
           'Аккаунты воркают: ' +
             accounts.length +
