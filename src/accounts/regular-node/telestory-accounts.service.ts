@@ -143,59 +143,19 @@ export class TelestoryAccountsService implements OnModuleInit {
         );
       });
 
-      const wizard = new WizardScene<AddAccountState>('ADD_ACCOUNT');
-
-      wizard.addStep(async (msg) => {
-        const nodes = Array.from(this.telestoryNodesService.nodes.values());
+      botDp.onNewMessage((filters.command('add'), async (msg) => {
+        const nodes = Object.values(this.telestoryNodesService.nodes)
 
         const nodesKeyboard = nodes.map((node) => {
-          return [BotKeyboard.callback(node.name, node.id.toString())];
+          return [BotKeyboard.callback(node.name, `/choose_node ${node.id.toString()}`)];
         });
 
-        await msg.answerText('Choose node', {
+        await msg.answerText('Выбери ноду', {
           replyMarkup: BotKeyboard.inline(nodesKeyboard),
         });
-
-        return WizardSceneAction.Next;
-      });
-
-      wizard.onCallbackQuery(
-        filters.and(wizard.onCurrentStep(), filters.equals('SKIP')),
-        async (upd, state) => {
-          await state.merge({ name: 'Anonymous' });
-          await wizard.skip(state);
-
-          await upd.client.sendText(
-            upd.chat.id,
-            'Alright, "Anonymous" then\n\nNow enter your email',
-          );
-        },
-      );
-
-      wizard.addStep(async (msg, state) => {
-        // simple validation
-        if (msg.text.length < 3) {
-          await msg.replyText('Invalid name!');
-          return WizardSceneAction.Stay;
-        }
-
-        await state.set({ name: msg.text.trim() });
-        await msg.answerText('Enter your email');
-
-        return WizardSceneAction.Next;
-      });
-
-      wizard.addStep(async (msg, state) => {
-        const { name } = (await state.get())!;
-
-        console.log({ name, email: msg.text });
-
-        await msg.answerText('Thanks!');
-        return WizardSceneAction.Exit;
-      });
-
-      botDp.addScene(wizard);
+      }))
     }
+    
 
     this.initialized = true;
   }
