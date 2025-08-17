@@ -146,6 +146,8 @@ export class TelestoryAccountsService implements OnModuleInit {
       botDp.onNewMessage((filters.command('add'), async (msg) => {
         const nodes = Object.values(this.telestoryNodesService.nodes)
 
+        await msg.answerText(`Доступные ноды: ${nodes.length}`);
+
         const nodesKeyboard = nodes.map((node) => {
           return [BotKeyboard.callback(node.name, `/choose_node ${node.id.toString()}`)];
         });
