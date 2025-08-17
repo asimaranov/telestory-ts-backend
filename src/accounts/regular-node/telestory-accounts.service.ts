@@ -45,6 +45,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       const tg = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
+        storage: `session-${account.name}`,
       });
 
       await tg.importSession(account.sessionData);
@@ -80,15 +81,18 @@ export class TelestoryAccountsService implements OnModuleInit {
       this.accountMutexes.set(account.name, new Mutex());
     }
 
-    this.botClient = new TelegramClient({
-      apiId: Number(process.env.API_ID),
-      apiHash: process.env.API_HASH!,
-    });
 
     if (process.env.BOT_TOKEN) {
+      this.botClient = new TelegramClient({
+        apiId: Number(process.env.API_ID),
+        apiHash: process.env.API_HASH!,
+        storage: `session-bot-${process.env.BOT_TOKEN.split(':')[0]}`,
+      });
+  
       console.log('Starting bot client');
       await this.botClient.start({
         botToken: process.env.BOT_TOKEN,
+        
       });
 
       console.log('Bot client started');
@@ -97,7 +101,9 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       botDp.onNewMessage(async (msg) => {
         console.log('New message on bot', msg);
-        await msg.answerText(`Hello from bot on server ${process.env.NODE_ID}. Bot token: ${process.env.BOT_TOKEN}. Bot client id: ${JSON.stringify(await this.botClient.getMe())}`);
+        await msg.answerText(
+          `Hello from bot on server ${process.env.NODE_ID}. Bot token: ${process.env.BOT_TOKEN}. Bot client id: ${JSON.stringify(await this.botClient.getMe())}`,
+        );
       });
 
       botDp.onNewMessage(filters.command('start'), async (msg) => {
@@ -141,6 +147,8 @@ export class TelestoryAccountsService implements OnModuleInit {
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
+      storage: `temp-${phone}`
+
     });
 
     const code = (await tg.sendCode({ phone })) as SentCode;
@@ -174,6 +182,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
+      storage: `temp-${phone}`
     });
 
     await tg.importSession(pendingAccount.sessionData);
