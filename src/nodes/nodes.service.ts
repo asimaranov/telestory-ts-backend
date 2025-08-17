@@ -17,24 +17,27 @@ export class TelestoryNodesService implements OnModuleInit {
   private telestoryNodes: Model<TelestoryNodeData>;
   constructor(private readonly httpService: HttpService) {}
 
-
   async onModuleInit() {
     await this.initialize();
   }
 
   async updateCurrentNodeStats(node: TelestoryNodeData) {
-    const node_ip = await firstValueFrom(this.httpService.get( `${node.apiUrl}/api/v1/node/stats`, {
-      headers: {
-        'User-Agent': 'curl/8.4.0',
-      }
-    }));
+    const node_ip = await firstValueFrom(
+      this.httpService.get(`${node.apiUrl}/api/v1/node/stats`, {
+        headers: {
+          'User-Agent': 'curl/8.4.0',
+        },
+      }),
+    );
     node.ip = node_ip.data;
     node.apiUrl = process.env.NODE_API_URL!;
     node.type = process.env.NODE_TYPE! as 'free' | 'premium';
   }
 
   async masterCheckNode(node: TelestoryNodeData) {
-    const nodeResponse = await firstValueFrom(this.httpService.get(`${node.apiUrl}/api/v1/node/stats`));
+    const nodeResponse = await firstValueFrom(
+      this.httpService.get(`${node.apiUrl}/api/v1/node/stats`),
+    );
     if (nodeResponse.status === 200) {
       node.approvedByMasterNode = true;
       node.lastActive = new Date();
@@ -48,46 +51,44 @@ export class TelestoryNodesService implements OnModuleInit {
   }
 
   async initialize(): Promise<void> {
-    if (process.env.IS_MASTER_NODE === 'true') {
-      const nodes = await this.telestoryNodes.find({});
+    const nodes = await this.telestoryNodes.find({});
 
-      for (const node of nodes) {
-        this.nodes.set(node.ip, node);
-        this.nodeMutexes.set(node.ip, new Mutex());
-      }
-    } else {
-      let node = await this.telestoryNodes.findOne({
-        name: process.env.NODE_ID,
-      });
-      const node_ip = await firstValueFrom(this.httpService.get(`https://2ip.ru`, {
+    for (const node of nodes) {
+      this.nodes.set(node.ip, node);
+      this.nodeMutexes.set(node.ip, new Mutex());
+    }
+    let node = await this.telestoryNodes.findOne({
+      name: process.env.NODE_ID,
+    });
+    const node_ip = await firstValueFrom(
+      this.httpService.get(`https://2ip.ru`, {
         headers: {
           'User-Agent': 'curl/8.4.0',
-        }
-      }));
-      if (node) {
-        node.ip = node_ip.data;
-        node.apiUrl = process.env.NODE_API_URL!;
-        node.type = process.env.NODE_TYPE! as 'free' | 'premium';
-        node.lastActive = new Date();
+        },
+      }),
+    );
+    if (node) {
+      node.ip = node_ip.data;
+      node.apiUrl = process.env.NODE_API_URL!;
+      node.type = process.env.NODE_TYPE! as 'free' | 'premium';
+      node.lastActive = new Date();
 
-        await node.save();
-      } else {
-        // create new node
-        const newNode = new this.telestoryNodes({
-          name: process.env.NODE_ID,
-          ip: node_ip.data,
-          apiUrl: process.env.NODE_API_URL!,
-          type: process.env.NODE_TYPE,
-        });
-        await newNode.save();
-        node = newNode;
-      }
-      for (const [name, node] of this.nodes) {
-
-        if(await this.masterCheckNode(node)) {
-          this.nodes.set(name, node);
-          this.nodeMutexes.set(name, new Mutex());
-        }
+      await node.save();
+    } else {
+      // create new node
+      const newNode = new this.telestoryNodes({
+        name: process.env.NODE_ID,
+        ip: node_ip.data,
+        apiUrl: process.env.NODE_API_URL!,
+        type: process.env.NODE_TYPE,
+      });
+      await newNode.save();
+      node = newNode;
+    }
+    for (const [name, node] of this.nodes) {
+      if (await this.masterCheckNode(node)) {
+        this.nodes.set(name, node);
+        this.nodeMutexes.set(name, new Mutex());
       }
     }
 
