@@ -7,7 +7,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
-import { CallbackDataBuilder, Dispatcher, filters } from '@mtcute/dispatcher';
+import {
+  CallbackDataBuilder,
+  Dispatcher,
+  filters,
+  MemoryStateStorage,
+  PropagationAction,
+} from '@mtcute/dispatcher';
 import { message } from '@mtcute/core/utils/links/chat.js';
 import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
@@ -106,34 +112,81 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       console.log('Bot client started');
 
-      const wizardScene = new WizardScene<AddAccountState>('add_account');
+      const wizardScene = new WizardScene<AddAccountState>('add_account', {
+        storage: new MemoryStateStorage(),
+      });
 
-      wizardScene.addStep(async (msg) => {
-        await msg.answerText('Введи имя аккаунта');
+      wizardScene.addStep(async (msg, state) => {
+
+        await msg.answerText('Введи номер телефона', {
+          replyMarkup: BotKeyboard.inline([
+            [BotKeyboard.callback('Cancel', 'CANCEL')],
+          ]),
+        });
+        
 
         return WizardSceneAction.Next;
       });
 
-      wizardScene.addStep(async (msg) => {
-        await msg.answerText('Введи номер телефона');
+      wizardScene.addStep(async (msg, state) => {
+        await state.merge({ phone: msg.text });
+
+        const { phone } = await state.get() as AddAccountState;
+
+        try {
+          await this.addAccountByPhone(msg.text, msg.text);
+        } catch (error) {
+          await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый номер телефона');
+          throw error;
+        }
+
+
+        await msg.answerText('Введи код из СМС', {
+          replyMarkup: BotKeyboard.inline([
+            [BotKeyboard.callback('Cancel', 'CANCEL')],
+          ]),
+        });
 
         return WizardSceneAction.Next;
       });
 
-      wizardScene.addStep(async (msg) => {
-        await msg.answerText('Введи код из СМС');
+      wizardScene.addStep(async (msg, state) => {
+        const { name, phone } = await state.get() as AddAccountState;
 
-        return WizardSceneAction.Next;
-      });
+        console.log('Add account', name, phone);
 
-      wizardScene.addStep(async (msg) => {
+        try {
+          await this.confirmAccountByPhone(phone!, msg.text);
+        } catch (error) {
+          await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый код из СМС');
+          throw error;
+        }
+
         await msg.answerText('Аккаунт добавлен');
 
         return WizardSceneAction.Exit;
       });
 
-      const botDp = Dispatcher.scene<AddAccountState>('add_account');
-      botDp.bindToClient(this.botClient);
+      wizardScene.onCallbackQuery(
+        filters.equals('CANCEL'),
+        async (upd, state) => {
+          console.log('Cancel callback query', upd);
+          await upd.answer({});
+
+          await upd.editMessage({
+            text: 'Действие отменено',
+          });
+
+          await state.exit();
+
+          return PropagationAction.ToScene;
+        },
+      );
+
+      const botDp = Dispatcher.for<AddAccountState>(this.botClient, {
+        storage: new MemoryStateStorage(),
+      });
+
       botDp.addScene(wizardScene);
 
       // botDp.onNewMessage(async (msg) => {
@@ -200,11 +253,16 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       botDp.onCallbackQuery(ChooseNodeButton.filter(), async (query, state) => {
         query.answer({});
+        await state.enter(wizardScene);
+
         await query.editMessage({
           text: 'Введи имя аккаунта',
+          replyMarkup: BotKeyboard.inline([
+            [BotKeyboard.callback('Cancel', 'CANCEL')],
+          ]),
         });
 
-        state.enter(wizardScene);
+        return PropagationAction.ToScene;
       });
     }
 
