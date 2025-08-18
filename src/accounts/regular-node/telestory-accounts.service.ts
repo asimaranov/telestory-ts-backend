@@ -136,7 +136,11 @@ export class TelestoryAccountsService implements OnModuleInit {
         try {
           await this.addAccountByPhone(msg.text, msg.text);
         } catch (error) {
-          await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый номер телефона');
+          await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый номер телефона', {
+            replyMarkup: BotKeyboard.inline([
+              [BotKeyboard.callback('Cancel', 'CANCEL')],
+            ]),
+          });
           throw error;
         }
 
@@ -157,7 +161,11 @@ export class TelestoryAccountsService implements OnModuleInit {
         try {
           await this.confirmAccountByPhone(phone!, msg.text);
         } catch (error) {
-          await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый код из СМС');
+          await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый код из СМС', {
+            replyMarkup: BotKeyboard.inline([
+              [BotKeyboard.callback('Cancel', 'CANCEL')],
+            ]),
+          });
           throw error;
         }
 
@@ -197,22 +205,31 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       botDp.onNewMessage(filters.command('start'), async (msg) => {
         console.log('New message on bot', msg);
-        await msg.answerText('Start command');
+        const totalAccounts = await this.telestoryAccountData.find({
+          isActive: true,
+          type: 'user',
+        });
+
+        const workingAccounts = totalAccounts.filter((account) => {
+          return account.isActive;
+        });
+
+        const notWorkingAccounts = totalAccounts.filter((account) => {
+          return !account.isActive;
+        });
+
         await msg.answerText(
           'Мастер нода: ' + process.env.NODE_ID + '\n\n' +
           'Аккаунты воркают:' +
-            accounts.length +
-            `\n\n${Array.from(accounts)
-              .filter((account) => {
-                return account.isActive;
-              })
+          workingAccounts.length +
+            `\n\n${Array.from(workingAccounts)
               .map((account) => {
                 return `${account.name} ${account.bindNodeId}`;
               })
               .join('\n')}\n` +
-            `Аккаунты не воркают: ${accounts.length - this.accounts.size}
+            `Аккаунты не воркают: ${notWorkingAccounts.length}
 
-            ${Array.from(accounts)
+            ${Array.from(notWorkingAccounts)
               .filter((account) => {
                 return !account.isActive;
               })
