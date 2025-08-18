@@ -200,6 +200,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.log('New message on bot', msg);
         await msg.answerText('Start command');
         await msg.answerText(
+          'Мастер нода: ' + process.env.NODE_ID + '\n\n' +
           'Аккаунты воркают:' +
             accounts.length +
             `\n\n${Array.from(accounts)
