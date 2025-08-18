@@ -117,6 +117,8 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       wizardScene.addStep(async (msg, state) => {
+        await state.merge({ name: msg.text });
+
 
         await msg.answerText('Введи номер телефона', {
           replyMarkup: BotKeyboard.inline([
@@ -131,15 +133,12 @@ export class TelestoryAccountsService implements OnModuleInit {
       wizardScene.addStep(async (msg, state) => {
         await state.merge({ phone: msg.text });
 
-        const { phone } = await state.get() as AddAccountState;
-
         try {
           await this.addAccountByPhone(msg.text, msg.text);
         } catch (error) {
           await msg.answerText('Ошибка при добавлении аккаунта: ' + error.message + ' Введи новый номер телефона');
           throw error;
         }
-
 
         await msg.answerText('Введи код из СМС', {
           replyMarkup: BotKeyboard.inline([
@@ -314,6 +313,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     await tg.importSession(pendingAccount.sessionData);
 
     try {
+      console.log('Signing in', phone, pendingAccount.phoneCodeHash, phoneCode);
       await tg.signIn({
         phone,
         phoneCodeHash: pendingAccount.phoneCodeHash,
