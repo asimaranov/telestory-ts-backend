@@ -184,7 +184,9 @@ export class TelestoryAccountsService implements OnModuleInit {
             return [
               BotKeyboard.callback(
                 node.name,
-                ChooseNodeButton.build(node.id.toString()),
+                ChooseNodeButton.build({
+                  nodeId: node.name,
+                }),
               ),
             ];
           });
