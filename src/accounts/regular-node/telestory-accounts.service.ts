@@ -134,6 +134,7 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       const botDp = Dispatcher.scene<AddAccountState>('add_account');
       botDp.bindToClient(this.botClient);
+      botDp.addScene(wizardScene);
 
       // botDp.onNewMessage(async (msg) => {
       //   console.log('New message on bot', msg);
@@ -199,7 +200,9 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       botDp.onCallbackQuery(ChooseNodeButton.filter(), async (query, state) => {
         query.answer({});
-        console.log('Введи номер телефона');
+        await query.editMessage({
+          text: 'Введи имя аккаунта',
+        });
 
         state.enter(wizardScene);
       });
