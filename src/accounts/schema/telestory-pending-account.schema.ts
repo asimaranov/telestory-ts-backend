@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { Document, Mixed, SchemaTypes, Types } from 'mongoose';
 
-export type TelestoryPendingAccountDocument = BaseTelestoryPendingAccountDocument & Document;
+export type TelestoryPendingAccountDocument =
+  BaseTelestoryPendingAccountDocument & Document;
 
 export class BaseTelestoryPendingAccountDocument extends Document {
   @Prop({
@@ -12,6 +13,7 @@ export class BaseTelestoryPendingAccountDocument extends Document {
   @Prop({
     type: String,
     required: true,
+    unique: true,
   })
   phone: string;
   @Prop({
@@ -30,17 +32,16 @@ export class BaseTelestoryPendingAccountDocument extends Document {
     default: 'user',
   })
   type: 'user' | 'bot';
-  @Prop(
-    {
-      type: String,
-      required: true,
-    }
-  )
+  @Prop({
+    type: String,
+    required: true,
+  })
   bindNodeId: string;
 }
 
 @Schema({ timestamps: true, collection: 'telestory_pending_accounts' })
 export class TelestoryPendingAccountData extends BaseTelestoryPendingAccountDocument {}
 
-export const TelestoryPendingAccountDataSchema =
-  SchemaFactory.createForClass(TelestoryPendingAccountData);
+export const TelestoryPendingAccountDataSchema = SchemaFactory.createForClass(
+  TelestoryPendingAccountData,
+);

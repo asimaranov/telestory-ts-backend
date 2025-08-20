@@ -335,19 +335,27 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     const phoneCodeHash = code.phoneCodeHash;
 
-    const bindNodeId = process.env.NODE_ID;
+    const bindNodeId = process.env.NODE_ID!;
 
     const session = await tg.exportSession();
 
-    const pendingAccount = new this.telestoryPendingAccountData({
-      sessionData: session,
-      name,
-      bindNodeId,
-      phone: normalizedPhone,
-      phoneCodeHash,
-    });
-
-    await pendingAccount.save();
+    // Use upsert to create or update pending account in a single atomic operation
+    await this.telestoryPendingAccountData.updateOne(
+      { phone: normalizedPhone },
+      {
+        $set: {
+          sessionData: session,
+          name,
+          bindNodeId,
+          phoneCodeHash,
+          phone: normalizedPhone,
+        },
+        $setOnInsert: {
+          type: 'user', // Only set default type on insert
+        },
+      },
+      { upsert: true },
+    );
   }
 
   async confirmAccountByPhone(phone: string, phoneCode: string) {
