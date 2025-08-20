@@ -17,6 +17,7 @@ import {
 import { message } from '@mtcute/core/utils/links/chat.js';
 import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
+import { PhoneUtils } from '../../common/utils/phone.utils';
 
 interface AddAccountState {
   nodeId?: string;
@@ -130,10 +131,33 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       wizardScene.addStep(async (msg, state) => {
-        await state.merge({ phone: msg.text });
+        const { name } = (await state.get()) as AddAccountState;
+
+        let phone: string;
+        try {
+          phone = PhoneUtils.normalize(msg.text);
+        } catch (error) {
+          let errorMessage = 'Неправильный формат номера телефона.';
+          if (error.message.includes('INVALID_COUNTRY')) {
+            errorMessage =
+              'Неправильный формат номера. Введи номер в формате +7XXXXXXXXXX или 8XXXXXXXXXX';
+          } else if (error.message.includes('Invalid phone number')) {
+            errorMessage =
+              'Неправильный номер телефона. Проверь правильность введенного номера.';
+          }
+
+          await msg.answerText(errorMessage + ' Попробуй еще раз:', {
+            replyMarkup: BotKeyboard.inline([
+              [BotKeyboard.callback('Cancel', 'CANCEL')],
+            ]),
+          });
+          return WizardSceneAction.Stay;
+        }
+
+        await state.merge({ phone });
 
         try {
-          await this.addAccountByPhone(msg.text, msg.text);
+          await this.addAccountByPhone(name!, phone);
         } catch (error) {
           await msg.answerText(
             'Ошибка при добавлении аккаунта: ' +
@@ -298,13 +322,16 @@ export class TelestoryAccountsService implements OnModuleInit {
   }
 
   async addAccountByPhone(name: string, phone: string) {
+    // Normalize the phone number to E.164 format for consistency
+    const normalizedPhone = PhoneUtils.normalize(phone);
+
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
-      storage: `temp-${phone}`,
+      storage: `temp-${normalizedPhone}`,
     });
 
-    const code = (await tg.sendCode({ phone })) as SentCode;
+    const code = (await tg.sendCode({ phone: normalizedPhone })) as SentCode;
 
     const phoneCodeHash = code.phoneCodeHash;
 
@@ -316,7 +343,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       sessionData: session,
       name,
       bindNodeId,
-      phone,
+      phone: normalizedPhone,
       phoneCodeHash,
     });
 
@@ -324,8 +351,11 @@ export class TelestoryAccountsService implements OnModuleInit {
   }
 
   async confirmAccountByPhone(phone: string, phoneCode: string) {
+    // Normalize the phone number to ensure consistency with stored data
+    const normalizedPhone = PhoneUtils.normalize(phone);
+
     const pendingAccount = await this.telestoryPendingAccountData.findOne({
-      phone,
+      phone: normalizedPhone,
     });
 
     if (!pendingAccount) {
@@ -335,15 +365,20 @@ export class TelestoryAccountsService implements OnModuleInit {
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
-      storage: `temp-${phone}`,
+      storage: `temp-${normalizedPhone}`,
     });
 
-    await tg.importSession(pendingAccount.sessionData);
+    // await tg.importSession(pendingAccount.sessionData);
 
     try {
-      console.log('Signing in', phone, pendingAccount.phoneCodeHash, phoneCode);
+      console.log(
+        'Signing in',
+        normalizedPhone,
+        pendingAccount.phoneCodeHash,
+        phoneCode,
+      );
       await tg.signIn({
-        phone,
+        phone: normalizedPhone,
         phoneCodeHash: pendingAccount.phoneCodeHash,
         phoneCode,
       });

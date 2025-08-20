@@ -16,6 +16,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import { randomBytes } from 'crypto';
+import { PhoneUtils } from '../common/utils/phone.utils';
 
 /**
  * File Name Guesser Implementation
