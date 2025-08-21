@@ -14,19 +14,15 @@ export class BaseTelestoryAccountDocument extends Document {
     required: true,
   })
   sessionData: string;
-  @Prop(
-    {
-      type: Date,
-      default: Date.now,
-    }
-  )
+  @Prop({
+    type: Date,
+    default: Date.now,
+  })
   lastActive: Date;
-  @Prop(
-    {
-      type: Boolean,
-      default: true,
-    }
-  )
+  @Prop({
+    type: Boolean,
+    default: true,
+  })
   isActive: boolean;
   @Prop({
     type: String,
@@ -39,13 +35,16 @@ export class BaseTelestoryAccountDocument extends Document {
     default: 'user',
   })
   type: 'user' | 'bot';
-  @Prop(
-    {
-      type: String,
-      required: true,
-    }
-  )
+  @Prop({
+    type: String,
+    required: true,
+  })
   bindNodeId: string;
+  @Prop({
+    type: String,
+    required: false, // Making it optional for existing accounts
+  })
+  phone?: string;
 }
 
 @Schema({ timestamps: true, collection: 'telestory_accounts' })

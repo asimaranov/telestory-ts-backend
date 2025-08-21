@@ -10,7 +10,10 @@ export class NodeAccountsStatsDto {
   @ApiProperty({ description: 'Number of inactive accounts' })
   inactiveAccounts: number;
 
-  @ApiProperty({ description: 'List of inactive accounts with reasons', type: [Object] })
+  @ApiProperty({
+    description: 'List of inactive accounts with reasons',
+    type: [Object],
+  })
   inactiveAccountsDetails: Array<{
     name: string;
     reason: string;
@@ -104,7 +107,10 @@ export class SingleNodeStatsDto {
   @ApiProperty({ description: 'Last activity timestamp' })
   lastActive: string;
 
-  @ApiProperty({ description: 'Account statistics', type: NodeAccountsStatsDto })
+  @ApiProperty({
+    description: 'Account statistics',
+    type: NodeAccountsStatsDto,
+  })
   accountsStats: NodeAccountsStatsDto;
 
   @ApiProperty({ description: 'Request statistics', type: NodeRequestStatsDto })
@@ -121,7 +127,10 @@ export class SingleNodeStatsDto {
 }
 
 export class AllNodesStatsDto {
-  @ApiProperty({ description: 'Statistics for all nodes', type: [SingleNodeStatsDto] })
+  @ApiProperty({
+    description: 'Statistics for all nodes',
+    type: [SingleNodeStatsDto],
+  })
   nodes: SingleNodeStatsDto[];
 
   @ApiProperty({ description: 'Summary of all nodes' })

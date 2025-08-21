@@ -233,9 +233,6 @@ export class NodeStatsService {
    */
   private async getRemoteNodeStats(node: any): Promise<SingleNodeStatsDto> {
     try {
-      console.log(
-        `${node.apiUrl}api/node/stats`,
-      );
       const response = await firstValueFrom(
         this.httpService.get(`${node.apiUrl}node/stats`, {
           timeout: 10000,
@@ -246,8 +243,6 @@ export class NodeStatsService {
           },
         }),
       );
-
-      console.log(response.data);
 
       return response.data;
     } catch (error) {

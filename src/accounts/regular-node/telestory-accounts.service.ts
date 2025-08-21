@@ -407,9 +407,12 @@ export class TelestoryAccountsService implements OnModuleInit {
               (workingAccounts.length > 0
                 ? `✅ **Активные аккаунты:**\n${Array.from(workingAccounts)
                     .slice(0, 10) // Limit to first 10
-                    .map(
-                      (account) => `• ${account.name} (${account.bindNodeId})`,
-                    )
+                    .map((account) => {
+                      const phoneDisplay = account.phone
+                        ? `***${account.phone.slice(-4)}`
+                        : 'номер не указан';
+                      return `• ${account.name} (${phoneDisplay})`;
+                    })
                     .join(
                       '\n',
                     )}\n${workingAccounts.length > 10 ? `• И еще ${workingAccounts.length - 10}...\n` : ''}\n`
@@ -417,9 +420,12 @@ export class TelestoryAccountsService implements OnModuleInit {
               (notWorkingAccounts.length > 0
                 ? `❌ **Неактивные аккаунты:**\n${Array.from(notWorkingAccounts)
                     .slice(0, 5) // Limit to first 5
-                    .map(
-                      (account) => `• ${account.name} (${account.bindNodeId})`,
-                    )
+                    .map((account) => {
+                      const phoneDisplay = account.phone
+                        ? `***${account.phone.slice(-4)}`
+                        : 'номер не указан';
+                      return `• ${account.name} (${phoneDisplay})`;
+                    })
                     .join(
                       '\n',
                     )}\n${notWorkingAccounts.length > 5 ? `• И еще ${notWorkingAccounts.length - 5}...\n` : ''}\n`
@@ -479,7 +485,10 @@ export class TelestoryAccountsService implements OnModuleInit {
               statsMessage += `• Одобрена: ${node.approvedByMaster ? '✅ Да' : '❌ Нет'}\n`;
               statsMessage += `• Аккаунты: **${node.accountsStats.activeAccounts}**/**${node.accountsStats.totalAccounts}**\n`;
               statsMessage += `• Запросов за день: **${node.requestStats.requestsLastDay}**\n`;
-              statsMessage += `• Свободно диска: **${node.systemStats.freeDiskSpaceFormatted}** (${node.systemStats.freeDiskSpacePercent.toFixed(1)}%)\n`;
+              const usedSpacePercent =
+                100 - node.systemStats.freeDiskSpacePercent;
+              statsMessage += `• Свободно диска: **${node.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
+              statsMessage += `• Диск: **${usedSpacePercent.toFixed(1)}%**/**${node.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
               statsMessage += `• Память: **${node.systemStats.freeMemoryFormatted}**/**${node.systemStats.totalMemoryFormatted}**\n`;
               statsMessage += `• Аптайм: \`${node.systemStats.uptimeFormatted}\`\n\n`;
             }
@@ -523,7 +532,10 @@ export class TelestoryAccountsService implements OnModuleInit {
             statsMessage += `• Общий размер загрузок: **${statsData.requestStats.totalDownloadSizeFormatted}**\n\n`;
 
             statsMessage += `💾 **Система:**\n`;
-            statsMessage += `• Диск: **${statsData.systemStats.freeDiskSpaceFormatted}**/**${statsData.systemStats.totalDiskSpaceFormatted}** (${statsData.systemStats.freeDiskSpacePercent.toFixed(1)}% свободно)\n`;
+            const usedSpacePercent =
+              100 - statsData.systemStats.freeDiskSpacePercent;
+            statsMessage += `• Свободно диска: **${statsData.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
+            statsMessage += `• Диск: **${usedSpacePercent.toFixed(1)}%**/**${statsData.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
             statsMessage += `• Память: **${statsData.systemStats.freeMemoryFormatted}**/**${statsData.systemStats.totalMemoryFormatted}**\n`;
             statsMessage += `• Аптайм: \`${statsData.systemStats.uptimeFormatted}\`\n`;
             statsMessage += `• CPU: **${statsData.systemStats.cpus.length}** ядер\n\n`;
@@ -668,6 +680,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       lastActive: new Date(),
       isActive: true,
       type: 'user',
+      phone: normalizedPhone,
     });
 
     await this.telestoryPendingAccountData.deleteOne({
