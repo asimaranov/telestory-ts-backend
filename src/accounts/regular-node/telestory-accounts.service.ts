@@ -27,6 +27,53 @@ interface AddAccountState {
 }
 
 const ChooseNodeButton = new CallbackDataBuilder('choose_node', 'nodeId');
+const PinpadDigit = new CallbackDataBuilder('pinpad_digit', 'digit');
+const PinpadAction = new CallbackDataBuilder('pinpad_action', 'action');
+
+function createPinpadKeyboard(currentCode: string = '') {
+  const keyboard = [
+    // Row 1: 1, 2, 3
+    [
+      BotKeyboard.callback('1', PinpadDigit.build({ digit: '1' })),
+      BotKeyboard.callback('2', PinpadDigit.build({ digit: '2' })),
+      BotKeyboard.callback('3', PinpadDigit.build({ digit: '3' })),
+    ],
+    // Row 2: 4, 5, 6
+    [
+      BotKeyboard.callback('4', PinpadDigit.build({ digit: '4' })),
+      BotKeyboard.callback('5', PinpadDigit.build({ digit: '5' })),
+      BotKeyboard.callback('6', PinpadDigit.build({ digit: '6' })),
+    ],
+    // Row 3: 7, 8, 9
+    [
+      BotKeyboard.callback('7', PinpadDigit.build({ digit: '7' })),
+      BotKeyboard.callback('8', PinpadDigit.build({ digit: '8' })),
+      BotKeyboard.callback('9', PinpadDigit.build({ digit: '9' })),
+    ],
+    // Row 4: Clear, 0, Backspace
+    [
+      BotKeyboard.callback(
+        '🔄 Очистить',
+        PinpadAction.build({ action: 'clear' }),
+      ),
+      BotKeyboard.callback('0', PinpadDigit.build({ digit: '0' })),
+      BotKeyboard.callback(
+        '⬅️ Стереть',
+        PinpadAction.build({ action: 'backspace' }),
+      ),
+    ],
+    // Row 5: Submit and Cancel
+    [
+      BotKeyboard.callback(
+        '✅ Подтвердить',
+        PinpadAction.build({ action: 'submit' }),
+      ),
+      BotKeyboard.callback('❌ Отмена', 'CANCEL'),
+    ],
+  ];
+
+  return BotKeyboard.inline(keyboard);
+}
 
 @Injectable()
 export class TelestoryAccountsService implements OnModuleInit {
@@ -172,39 +219,23 @@ export class TelestoryAccountsService implements OnModuleInit {
           throw error;
         }
 
-        await msg.answerText('Введи код из СМС', {
-          replyMarkup: BotKeyboard.inline([
-            [BotKeyboard.callback('Cancel', 'CANCEL')],
-          ]),
+        await msg.answerText('Введи код из СМС:\n\nКод: (не введен)', {
+          replyMarkup: createPinpadKeyboard(),
         });
 
         return WizardSceneAction.Next;
       });
 
       wizardScene.addStep(async (msg, state) => {
-        const { name, phone } = (await state.get()) as AddAccountState;
+        // This step is now handled by callback queries, so we redirect to pinpad
+        await msg.answerText(
+          'Используйте клавиатуру ниже для ввода кода из СМС:',
+          {
+            replyMarkup: createPinpadKeyboard(),
+          },
+        );
 
-        console.log('Add account', name, phone);
-
-        try {
-          await this.confirmAccountByPhone(phone!, msg.text);
-        } catch (error) {
-          await msg.answerText(
-            'Ошибка при добавлении аккаунта: ' +
-              error.message +
-              ' Введи новый код из СМС',
-            {
-              replyMarkup: BotKeyboard.inline([
-                [BotKeyboard.callback('Cancel', 'CANCEL')],
-              ]),
-            },
-          );
-          throw error;
-        }
-
-        await msg.answerText('Аккаунт добавлен');
-
-        return WizardSceneAction.Exit;
+        return WizardSceneAction.Stay;
       });
 
       wizardScene.onCallbackQuery(
@@ -220,6 +251,112 @@ export class TelestoryAccountsService implements OnModuleInit {
           await state.exit();
 
           return PropagationAction.ToScene;
+        },
+      );
+
+      // Pinpad digit handlers
+      wizardScene.onCallbackQuery(PinpadDigit.filter(), async (upd, state) => {
+        console.log('Pinpad digit', upd);
+        const { digit } = PinpadDigit.parse(Buffer.from(upd.data!).toString());
+        const currentState = (await state.get()) as AddAccountState;
+        const currentCode = currentState.phoneCode || '';
+
+        if (currentCode.length < 10) {
+          // Limit code length to 10 digits
+          const newCode = currentCode + digit;
+          await state.merge({ phoneCode: newCode });
+
+          const codeDisplay = newCode || '(не введен)';
+          await upd.editMessage({
+            text: `Введи код из СМС:\n\nКод: ${codeDisplay}`,
+            replyMarkup: createPinpadKeyboard(newCode),
+          });
+        }
+
+        await upd.answer({});
+        return PropagationAction.Continue;
+      });
+
+      // Pinpad action handlers
+      wizardScene.onCallbackQuery(PinpadAction.filter(), async (upd, state) => {
+        console.log('Pinpad action', upd);
+        const { action } = PinpadAction.parse(
+          Buffer.from(upd.data!).toString(),
+        );
+        const currentState = (await state.get()) as AddAccountState;
+        const currentCode = currentState.phoneCode || '';
+
+        if (action === 'clear') {
+          await state.merge({ phoneCode: '' });
+          await upd.editMessage({
+            text: 'Введи код из СМС:\n\nКод: (не введен)',
+            replyMarkup: createPinpadKeyboard(''),
+          });
+        } else if (action === 'backspace') {
+          const newCode = currentCode.slice(0, -1);
+          await state.merge({ phoneCode: newCode });
+
+          const codeDisplay = newCode || '(не введен)';
+          await upd.editMessage({
+            text: `Введи код из СМС:\n\nКод: ${codeDisplay}`,
+            replyMarkup: createPinpadKeyboard(newCode),
+          });
+        } else if (action === 'submit') {
+          const { name, phone } = currentState;
+          const phoneCode = currentCode;
+
+          if (!phoneCode || phoneCode.length < 4) {
+            await upd.answer({
+              text: 'Код должен содержать минимум 4 цифры',
+              alert: true,
+            });
+            return PropagationAction.Continue;
+          }
+
+          await upd.editMessage({
+            text: `Проверяем код: ${phoneCode}...`,
+          });
+
+          try {
+            await this.confirmAccountByPhone(phone!, phoneCode);
+
+            await upd.editMessage({
+              text: 'Аккаунт успешно добавлен! ✅',
+            });
+
+            await state.exit();
+            return PropagationAction.Continue;
+          } catch (error) {
+            await upd.editMessage({
+              text: `Ошибка при добавлении аккаунта: ${error.message}\n\nПопробуйте ввести код еще раз:`,
+              replyMarkup: createPinpadKeyboard(''),
+            });
+
+            await state.merge({ phoneCode: '' });
+            return PropagationAction.Continue;
+          }
+        }
+
+        await upd.answer({});
+        return PropagationAction.Continue;
+      });
+
+      // Add handler to stop wizard on any command
+      wizardScene.onNewMessage(
+        (msg) => msg.text?.startsWith('/'),
+        async (msg, state) => {
+          console.log(
+            'Command received while in wizard, stopping wizard:',
+            msg.text,
+          );
+
+          await msg.answerText(
+            'Мастер добавления аккаунта остановлен из-за новой команды.',
+          );
+
+          await state.exit();
+
+          return PropagationAction.Stop;
         },
       );
 
@@ -331,7 +468,13 @@ export class TelestoryAccountsService implements OnModuleInit {
       storage: `temp-${normalizedPhone}`,
     });
 
+    console.log('Send code request', phone, normalizedPhone, {
+      phone: normalizedPhone,
+    });
+
     const code = (await tg.sendCode({ phone: normalizedPhone })) as SentCode;
+
+    console.log('Sent code response', code);
 
     const phoneCodeHash = code.phoneCodeHash;
 
