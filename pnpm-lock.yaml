@@ -17,6 +17,9 @@ importers:
       '@mtcute/dispatcher':
         specifier: ^0.25.7
         version: 0.25.7
+      '@mtcute/markdown-parser':
+        specifier: ^0.25.8
+        version: 0.25.8
       '@mtcute/node':
         specifier: ^0.25.7
         version: 0.25.7
@@ -701,6 +704,9 @@ packages:
   '@mtcute/core@0.25.7':
     resolution: {integrity: sha512-aE4aeALX9QMzPkaDk0IRs7gLQqCtqYd0XnysgaNZuZyVgPH8HgyX/AKJUNUeoOfnGZuvPbTZY5qVsBT7xKF6jw==}
 
+  '@mtcute/core@0.25.8':
+    resolution: {integrity: sha512-lP0H1ZpicAwrcHC112BCugueUVp/XEVvlD+x+wTvphxOvR49GNpg521lMCRBSM40TcktepheJugPraoSJhc7cA==}
+
   '@mtcute/dispatcher@0.25.7':
     resolution: {integrity: sha512-u9ZCIoX++PIMxqlhzXINADU6tHQsRNPXtxRAucc/nJo9aYE16/wbcvYB864obDE0tOX5qzdOiTul6NZt9eNzdw==}
 
@@ -710,8 +716,8 @@ packages:
   '@mtcute/html-parser@0.25.7':
     resolution: {integrity: sha512-Ms0zIjnSX0RHD3RxjXLAjXSVR1LyS2oEeKU4Zxu+u3LY2k3mO3klAZtwkwfJKJGfGuuP7EHafA4Cz2uUlZM4Lg==}
 
-  '@mtcute/markdown-parser@0.25.7':
-    resolution: {integrity: sha512-kPCKQkcHouZ5GscsuE5c/ajZW6G6XL8f42epY5zw9iWiJZNdhlHS9UFM3PO+bLGI39M/wIsrBJ4AGXpVxaV11A==}
+  '@mtcute/markdown-parser@0.25.8':
+    resolution: {integrity: sha512-4n/JgZSHQkG8MNd4bx/16KSeeZ30EBiXXWFHWxTa07Z4L12xpZ2PJ3WdmLPjhe/suY+p5PoKplmvbZLpKphRqQ==}
 
   '@mtcute/node@0.25.7':
     resolution: {integrity: sha512-G0H9m0Xo49cA+keQFeH30/t8T1g1DAwpPpoDVBC0RnDxs6MpT0upw0hsgoahMyfzw1K2OOvaInRZivlpZ7bXcQ==}
@@ -4517,6 +4523,17 @@ snapshots:
       '@types/events': 3.0.0
       long: 5.2.3
 
+  '@mtcute/core@0.25.8':
+    dependencies:
+      '@fuman/io': 0.0.15
+      '@fuman/net': 0.0.15
+      '@fuman/utils': 0.0.15
+      '@mtcute/file-id': 0.24.3
+      '@mtcute/tl': 211.0.0
+      '@mtcute/tl-runtime': 0.24.3
+      '@types/events': 3.0.0
+      long: 5.2.3
+
   '@mtcute/dispatcher@0.25.7':
     dependencies:
       '@fuman/utils': 0.0.15
@@ -4534,9 +4551,9 @@ snapshots:
       htmlparser2: 10.0.0
       long: 5.2.3
 
-  '@mtcute/markdown-parser@0.25.7':
+  '@mtcute/markdown-parser@0.25.8':
     dependencies:
-      '@mtcute/core': 0.25.7
+      '@mtcute/core': 0.25.8
       long: 5.2.3
 
   '@mtcute/node@0.25.7':
@@ -4546,7 +4563,7 @@ snapshots:
       '@fuman/utils': 0.0.15
       '@mtcute/core': 0.25.7
       '@mtcute/html-parser': 0.25.7
-      '@mtcute/markdown-parser': 0.25.7
+      '@mtcute/markdown-parser': 0.25.8
       '@mtcute/wasm': 0.24.3
       better-sqlite3: 11.3.0
     transitivePeerDependencies:

@@ -5,6 +5,7 @@ import { join } from 'path';
 import { AccountsModule } from '../accounts/accounts.module.js';
 import { NodesModule } from '../nodes/nodes.module.js';
 import { DownloadsStatsModule } from '../downloads-stats/downloads-stats.module.js';
+import { NodeStatsModule } from '../node-stats/node-stats.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { DownloadsStatsModule } from '../downloads-stats/downloads-stats.module.
     AccountsModule,
     NodesModule,
     DownloadsStatsModule,
+    NodeStatsModule,
     MongooseModule.forRoot(process.env.MONGODB_URI!),
   ],
   controllers: [],

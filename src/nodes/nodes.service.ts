@@ -14,7 +14,7 @@ export class TelestoryNodesService implements OnModuleInit {
   nodes = new Map<string, TelestoryNodeData>();
   nodeMutexes = new Map<string, Mutex>();
   @InjectModel(TelestoryNodeData.name)
-  private telestoryNodes: Model<TelestoryNodeData>;
+  public telestoryNodes: Model<TelestoryNodeData>; // Made public for stats service
   constructor(private readonly httpService: HttpService) {}
 
   async onModuleInit() {

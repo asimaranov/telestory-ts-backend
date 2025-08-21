@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   TelestoryAccountData,
@@ -10,6 +10,7 @@ import {
   TelestoryPendingAccountData,
   TelestoryPendingAccountDataSchema,
 } from './schema/telestory-pending-account.schema.js';
+import { NodeStatsModule } from '../node-stats/node-stats.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import {
       },
     ]),
     NodesModule,
+    forwardRef(() => NodeStatsModule),
   ],
   providers: [TelestoryAccountsService],
   exports: [TelestoryAccountsService],

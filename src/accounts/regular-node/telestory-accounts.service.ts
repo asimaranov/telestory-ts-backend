@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 
 import { Mutex } from 'async-mutex';
 import { TelestoryAccountData } from '../schema/telestory-account.schema.js';
@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
+import { NodeStatsService } from '../../node-stats/node-stats.service.js';
 import {
   CallbackDataBuilder,
   Dispatcher,
@@ -18,6 +19,7 @@ import { message } from '@mtcute/core/utils/links/chat.js';
 import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
 import { PhoneUtils } from '../../common/utils/phone.utils';
+import { md } from '@mtcute/markdown-parser';
 
 interface AddAccountState {
   nodeId?: string;
@@ -89,6 +91,8 @@ export class TelestoryAccountsService implements OnModuleInit {
     private telestoryAccountData: Model<TelestoryAccountData>,
     @InjectModel(TelestoryPendingAccountData.name)
     private telestoryPendingAccountData: Model<TelestoryPendingAccountData>,
+    @Inject(forwardRef(() => NodeStatsService))
+    private nodeStatsService: NodeStatsService,
   ) {}
 
   async onModuleInit() {
@@ -388,57 +392,167 @@ export class TelestoryAccountsService implements OnModuleInit {
           return !account.isActive;
         });
 
-        await msg.answerText(
-          'Мастер нода: ' +
-            process.env.NODE_ID +
-            '\n\n' +
-            'Аккаунты воркают:' +
-            workingAccounts.length +
-            `\n\n${Array.from(workingAccounts)
-              .map((account) => {
-                return `${account.name} ${account.bindNodeId}`;
-              })
-              .join('\n')}\n` +
-            `Аккаунты не воркают: ${notWorkingAccounts.length}
+        const isMasterNode = process.env.IS_MASTER_NODE === 'true';
 
-            ${Array.from(notWorkingAccounts)
-              .filter((account) => {
-                return !account.isActive;
-              })
-              .map((account) => {
-                return `
-                ${account.name} ${account.bindNodeId}
-              `;
-              })
-              .join('\n')}
-            `,
+        await msg.answerText(
+          md(
+            `🤖 **Telestory Bot** - ${isMasterNode ? 'Мастер нода' : 'Обычная нода'}: ${process.env.NODE_ID}\n\n` +
+              `📊 **Доступные команды:**\n` +
+              `• /start - Главная информация\n` +
+              `• /stats - Показать статистику всех нод\n` +
+              `• /add - Добавить аккаунт\n\n` +
+              `👥 **Аккаунты на ноде:**\n` +
+              `• Работающих: ${workingAccounts.length}\n` +
+              `• Не работающих: ${notWorkingAccounts.length}\n\n` +
+              (workingAccounts.length > 0
+                ? `✅ **Активные аккаунты:**\n${Array.from(workingAccounts)
+                    .slice(0, 10) // Limit to first 10
+                    .map(
+                      (account) => `• ${account.name} (${account.bindNodeId})`,
+                    )
+                    .join(
+                      '\n',
+                    )}\n${workingAccounts.length > 10 ? `• И еще ${workingAccounts.length - 10}...\n` : ''}\n`
+                : '') +
+              (notWorkingAccounts.length > 0
+                ? `❌ **Неактивные аккаунты:**\n${Array.from(notWorkingAccounts)
+                    .slice(0, 5) // Limit to first 5
+                    .map(
+                      (account) => `• ${account.name} (${account.bindNodeId})`,
+                    )
+                    .join(
+                      '\n',
+                    )}\n${notWorkingAccounts.length > 5 ? `• И еще ${notWorkingAccounts.length - 5}...\n` : ''}\n`
+                : '') +
+              `\n💡 Используйте /stats для детальной статистики!`,
+          ),
         );
       });
 
-      botDp.onNewMessage(
-        (filters.command('add'),
-        async (msg) => {
-          console.log('Service nodes', this.telestoryNodesService.nodes);
-          const nodes = Array.from(this.telestoryNodesService.nodes.values());
+      botDp.onNewMessage(filters.command('add'), async (msg) => {
+        console.log('Service nodes', this.telestoryNodesService.nodes);
+        const nodes = Array.from(this.telestoryNodesService.nodes.values());
 
-          await msg.answerText(`Доступные ноды: ${nodes.length}`);
+        await msg.answerText(`Доступные ноды: ${nodes.length}`);
 
-          const nodesKeyboard = nodes.map((node) => {
-            return [
-              BotKeyboard.callback(
-                node.name,
-                ChooseNodeButton.build({
-                  nodeId: node.name,
-                }),
-              ),
-            ];
-          });
+        const nodesKeyboard = nodes.map((node) => {
+          return [
+            BotKeyboard.callback(
+              node.name,
+              ChooseNodeButton.build({
+                nodeId: node.name,
+              }),
+            ),
+          ];
+        });
 
-          await msg.answerText('Выбери ноду', {
-            replyMarkup: BotKeyboard.inline(nodesKeyboard),
-          });
-        }),
-      );
+        await msg.answerText('Выбери ноду', {
+          replyMarkup: BotKeyboard.inline(nodesKeyboard),
+        });
+      });
+
+      // Stats command handler
+      botDp.onNewMessage(filters.command('stats'), async (msg) => {
+        try {
+          await msg.answerText('📊 Получение статистики всех нод...');
+
+          // Always try to get stats for all nodes first
+          let statsData;
+          try {
+            statsData = await this.nodeStatsService.getAllNodesStats();
+
+            let statsMessage = '📊 **Статистика всех нод**\n\n';
+            statsMessage += `🔍 **Общая информация:**\n`;
+            statsMessage += `• Всего нод: **${statsData.summary.totalNodes}**\n`;
+            statsMessage += `• Активных нод: **${statsData.summary.activeNodes}**\n`;
+            statsMessage += `• Одобренных нод: **${statsData.summary.approvedNodes}**\n`;
+            statsMessage += `• Всего аккаунтов: **${statsData.summary.totalAccounts}**\n`;
+            statsMessage += `• Активных аккаунтов: **${statsData.summary.totalActiveAccounts}**\n`;
+            statsMessage += `• Запросов за день: **${statsData.summary.totalRequestsLastDay}**\n`;
+            statsMessage += `• Использовано диска: **${statsData.summary.totalDiskSpaceUsedFormatted}**\n\n`;
+
+            // Add individual node stats
+            for (const node of statsData.nodes) {
+              statsMessage += `🖥️ **${node.nodeName}** (\`${node.nodeType}\`)\n`;
+              statsMessage += `• IP: \`${node.nodeIp}\`\n`;
+              statsMessage += `• Статус: ${node.isActive ? '🟢 Активна' : '🔴 Неактивна'}\n`;
+              statsMessage += `• Одобрена: ${node.approvedByMaster ? '✅ Да' : '❌ Нет'}\n`;
+              statsMessage += `• Аккаунты: **${node.accountsStats.activeAccounts}**/**${node.accountsStats.totalAccounts}**\n`;
+              statsMessage += `• Запросов за день: **${node.requestStats.requestsLastDay}**\n`;
+              statsMessage += `• Свободно диска: **${node.systemStats.freeDiskSpaceFormatted}** (${node.systemStats.freeDiskSpacePercent.toFixed(1)}%)\n`;
+              statsMessage += `• Память: **${node.systemStats.freeMemoryFormatted}**/**${node.systemStats.totalMemoryFormatted}**\n`;
+              statsMessage += `• Аптайм: \`${node.systemStats.uptimeFormatted}\`\n\n`;
+            }
+
+            statsMessage += `\n🕐 Обновлено: ${new Date(statsData.collectedAt).toLocaleString('ru-RU')}`;
+
+            await msg.answerText(md(statsMessage));
+          } catch (allNodesError) {
+            // If getting all nodes stats fails, fall back to current node only
+            console.warn(
+              'Failed to get all nodes stats, falling back to current node:',
+              allNodesError.message,
+            );
+
+            statsData = await this.nodeStatsService.getCurrentNodeStats();
+
+            let statsMessage = `📊 **Статистика ноды ${statsData.nodeName}**\n\n`;
+            statsMessage += `⚠️ **Примечание:** Показана только текущая нода (не удалось получить данные других нод)\n\n`;
+
+            // Show warning if stats collection partially failed
+            if (!statsData.statsCollectionSuccess) {
+              statsMessage += `⚠️ **Предупреждение:** Некоторые статистики недоступны\n\n`;
+            }
+
+            statsMessage += `🖥️ **Информация о ноде:**\n`;
+            statsMessage += `• Тип: ${statsData.nodeType === 'premium' ? '⭐ **Premium**' : '🆓 **Free**'}\n`;
+            statsMessage += `• IP: \`${statsData.nodeIp}\`\n`;
+            statsMessage += `• Статус: ${statsData.isActive ? '🟢 **Активна**' : '🔴 **Неактивна**'}\n`;
+            statsMessage += `• Одобрена мастером: ${statsData.approvedByMaster ? '✅ Да' : '❌ Нет'}\n\n`;
+
+            statsMessage += `👥 **Аккаунты:**\n`;
+            statsMessage += `• Всего: **${statsData.accountsStats.totalAccounts}**\n`;
+            statsMessage += `• Активных: **${statsData.accountsStats.activeAccounts}**\n`;
+            statsMessage += `• Неактивных: **${statsData.accountsStats.inactiveAccounts}**\n\n`;
+
+            statsMessage += `📈 **Запросы:**\n`;
+            statsMessage += `• За час: **${statsData.requestStats.requestsLastHour}**\n`;
+            statsMessage += `• За день: **${statsData.requestStats.requestsLastDay}**\n`;
+            statsMessage += `• За неделю: **${statsData.requestStats.requestsLastWeek}**\n`;
+            statsMessage += `• За месяц: **${statsData.requestStats.requestsLastMonth}**\n`;
+            statsMessage += `• Общий размер загрузок: **${statsData.requestStats.totalDownloadSizeFormatted}**\n\n`;
+
+            statsMessage += `💾 **Система:**\n`;
+            statsMessage += `• Диск: **${statsData.systemStats.freeDiskSpaceFormatted}**/**${statsData.systemStats.totalDiskSpaceFormatted}** (${statsData.systemStats.freeDiskSpacePercent.toFixed(1)}% свободно)\n`;
+            statsMessage += `• Память: **${statsData.systemStats.freeMemoryFormatted}**/**${statsData.systemStats.totalMemoryFormatted}**\n`;
+            statsMessage += `• Аптайм: \`${statsData.systemStats.uptimeFormatted}\`\n`;
+            statsMessage += `• CPU: **${statsData.systemStats.cpus.length}** ядер\n\n`;
+
+            if (statsData.accountsStats.inactiveAccountsDetails.length > 0) {
+              statsMessage += `❌ **Неактивные аккаунты:**\n`;
+              for (const account of statsData.accountsStats.inactiveAccountsDetails.slice(
+                0,
+                5,
+              )) {
+                statsMessage += `• **${account.name}**: \`${account.reason}\`\n`;
+              }
+              if (statsData.accountsStats.inactiveAccountsDetails.length > 5) {
+                statsMessage += `• И еще **${statsData.accountsStats.inactiveAccountsDetails.length - 5}**...\n`;
+              }
+              statsMessage += '\n';
+            }
+
+            statsMessage += `🕐 Обновлено: ${new Date().toLocaleString('ru-RU')}`;
+
+            await msg.answerText(md(statsMessage));
+          }
+        } catch (error) {
+          console.error('Error getting node stats:', error);
+          await msg.answerText(
+            md(`❌ **Ошибка при получении статистики:** ${error.message}`),
+          );
+        }
+      });
 
       botDp.onCallbackQuery(ChooseNodeButton.filter(), async (query, state) => {
         query.answer({});

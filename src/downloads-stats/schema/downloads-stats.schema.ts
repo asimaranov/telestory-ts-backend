@@ -10,18 +10,18 @@ export class BaseDownloadsStatsDocument extends Document {
   })
   timestamp: Date;
   @Prop({
-    type: Number,
+    type: String,
     required: true,
   })
   nodeName: string;
-  
+
   @Prop({
     type: String,
     required: true,
   })
   accountName: string;
   @Prop({
-    type: String,
+    type: Number,
     required: true,
   })
   fileSize: number;
