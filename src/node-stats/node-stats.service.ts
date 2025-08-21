@@ -100,12 +100,15 @@ export class NodeStatsService {
             freeDiskSpacePercent: 0,
             totalDiskSpaceFormatted: '0 B',
             freeDiskSpaceFormatted: '0 B',
+            usedDiskSpaceFormatted: '0 B',
             uptime: 0,
             uptimeFormatted: '0s',
             totalMemory: 0,
             freeMemory: 0,
+            usedMemory: 0,
             totalMemoryFormatted: '0 B',
             freeMemoryFormatted: '0 B',
+            usedMemoryFormatted: '0 B',
             cpus: [],
           },
           statsCollectionSuccess: false,
@@ -185,12 +188,15 @@ export class NodeStatsService {
             freeDiskSpacePercent: 0,
             totalDiskSpaceFormatted: '0 B',
             freeDiskSpaceFormatted: '0 B',
+            usedDiskSpaceFormatted: '0 B',
             uptime: 0,
             uptimeFormatted: '0s',
             totalMemory: 0,
             freeMemory: 0,
+            usedMemory: 0,
             totalMemoryFormatted: '0 B',
             freeMemoryFormatted: '0 B',
+            usedMemoryFormatted: '0 B',
             cpus: [],
           };
 
@@ -367,6 +373,10 @@ export class NodeStatsService {
     const uptimeSeconds = Math.floor(os.uptime());
     const totalMemoryBytes = os.totalmem();
     const freeMemoryBytes = os.freemem();
+    
+    // Calculate used space and memory
+    const usedDiskSpace = diskSpaceInfo.totalSpace - diskSpaceInfo.freeSpace;
+    const usedMemoryBytes = totalMemoryBytes - freeMemoryBytes;
 
     return {
       totalDiskSpace: diskSpaceInfo.totalSpace,
@@ -374,12 +384,15 @@ export class NodeStatsService {
       freeDiskSpacePercent: diskSpaceInfo.freeSpacePercent,
       totalDiskSpaceFormatted: this.formatBytes(diskSpaceInfo.totalSpace),
       freeDiskSpaceFormatted: this.formatBytes(diskSpaceInfo.freeSpace),
+      usedDiskSpaceFormatted: this.formatBytes(usedDiskSpace),
       uptime: uptimeSeconds,
       uptimeFormatted: this.formatUptime(uptimeSeconds),
       totalMemory: totalMemoryBytes,
       freeMemory: freeMemoryBytes,
+      usedMemory: usedMemoryBytes,
       totalMemoryFormatted: this.formatBytes(totalMemoryBytes),
       freeMemoryFormatted: this.formatBytes(freeMemoryBytes),
+      usedMemoryFormatted: this.formatBytes(usedMemoryBytes),
       cpus: os.cpus().map((cpu) => ({
         model: cpu.model,
         speed: cpu.speed,
@@ -388,7 +401,7 @@ export class NodeStatsService {
   }
 
   /**
-   * Get disk space information (reused from downloads-cleaner)
+   * Get disk space information for the system root drive (cross-platform)
    */
   private async getDiskSpaceInfo(): Promise<{
     totalSpace: number;
@@ -396,29 +409,154 @@ export class NodeStatsService {
     freeSpacePercent: number;
   }> {
     try {
-      const downloadsPath = path.join(process.cwd(), 'downloads');
-      const { spawn } = require('child_process');
+      // Use cross-platform approach to get root drive disk space
+      const rootPath = this.getRootPath();
 
-      return new Promise((resolve, reject) => {
-        const df = spawn('df', [downloadsPath]);
-        let output = '';
+      // Use Node.js fs.statSync for cross-platform disk space info
+      const stats = fs.statSync(rootPath);
 
-        df.stdout.on('data', (data: Buffer) => {
-          output += data.toString();
-        });
+      // For cross-platform disk space, we need to use a different approach
+      // since fs.statSync doesn't provide disk space info directly
+      return await this.getCrossPlatformDiskSpace(rootPath);
+    } catch (error) {
+      this.logger.warn(
+        'Could not get disk space info, using fallback:',
+        error.message,
+      );
+      return {
+        totalSpace: 1000000000000, // 1TB fallback
+        freeSpace: 500000000000, // 500GB fallback
+        freeSpacePercent: 50,
+      };
+    }
+  }
 
-        df.on('close', (code: number) => {
-          if (code !== 0) {
-            reject(new Error(`df command failed with code ${code}`));
-            return;
+  /**
+   * Get the root path for the current platform
+   */
+  private getRootPath(): string {
+    if (process.platform === 'win32') {
+      // On Windows, get the drive letter of the current working directory
+      const cwd = process.cwd();
+      return cwd.substring(0, 3); // e.g., "C:\"
+    } else {
+      // On Unix-like systems, use root
+      return '/';
+    }
+  }
+
+  /**
+   * Get disk space information using cross-platform methods
+   */
+  private async getCrossPlatformDiskSpace(rootPath: string): Promise<{
+    totalSpace: number;
+    freeSpace: number;
+    freeSpacePercent: number;
+  }> {
+    const { spawn } = require('child_process');
+
+    return new Promise((resolve, reject) => {
+      let command: string;
+      let args: string[];
+
+      if (process.platform === 'win32') {
+        // Windows: use wmic command
+        command = 'wmic';
+        args = [
+          'logicaldisk',
+          'where',
+          `caption="${rootPath.replace('\\', '')}"`,
+          'get',
+          'size,freespace',
+          '/format:csv',
+        ];
+      } else {
+        // Unix-like: use df command with platform-specific options
+        command = 'df';
+        if (process.platform === 'darwin') {
+          // macOS doesn't support -B option, use default block size and we'll convert
+          args = [rootPath];
+        } else {
+          // Linux supports -B1 for 1-byte blocks (exact bytes)
+          args = ['-B1', rootPath];
+        }
+      }
+
+      const process_spawn = spawn(command, args);
+      let output = '';
+      let errorOutput = '';
+
+      process_spawn.stdout.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
+
+      process_spawn.stderr.on('data', (data: Buffer) => {
+        errorOutput += data.toString();
+      });
+
+      process_spawn.on('close', (code: number) => {
+        if (code !== 0) {
+          reject(
+            new Error(
+              `${command} command failed with code ${code}: ${errorOutput}`,
+            ),
+          );
+          return;
+        }
+
+        try {
+          let totalSpace: number;
+          let freeSpace: number;
+
+          if (process.platform === 'win32') {
+            // Parse Windows wmic output
+            const lines = output
+              .trim()
+              .split('\n')
+              .filter((line) => line.includes(','));
+            if (lines.length === 0) {
+              throw new Error('No valid data from wmic command');
+            }
+
+            // CSV format: Node,FreeSpace,Size
+            const dataLine = lines[0];
+            const parts = dataLine.split(',');
+
+            if (parts.length < 3) {
+              throw new Error('Invalid wmic output format');
+            }
+
+            freeSpace = parseInt(parts[1]) || 0;
+            totalSpace = parseInt(parts[2]) || 0;
+          } else {
+            // Parse Unix df output
+            const lines = output.trim().split('\n');
+            const dataLine = lines[lines.length - 1];
+            const parts = dataLine.split(/\s+/);
+
+            if (parts.length < 4) {
+              throw new Error('Invalid df output format');
+            }
+
+            // df output format: Filesystem 1K-blocks Used Available Use% Mounted-on (or 512-byte blocks on macOS)
+            let totalBlocks = parseInt(parts[1]) || 0;
+            let availableBlocks = parseInt(parts[3]) || 0;
+
+            if (process.platform === 'darwin') {
+              // macOS uses 512-byte blocks by default
+              totalSpace = totalBlocks * 512;
+              freeSpace = availableBlocks * 512;
+            } else {
+              // Linux with -B1 uses 1-byte blocks (exact bytes)
+              totalSpace = totalBlocks;
+              freeSpace = availableBlocks;
+            }
           }
 
-          const lines = output.trim().split('\n');
-          const dataLine = lines[lines.length - 1];
-          const parts = dataLine.split(/\s+/);
+          if (totalSpace === 0) {
+            throw new Error('Total space is 0, invalid disk info');
+          }
 
-          const totalSpace = parseInt(parts[1]) * 1024;
-          const freeSpace = parseInt(parts[3]) * 1024;
           const freeSpacePercent = (freeSpace / totalSpace) * 100;
 
           resolve({
@@ -426,20 +564,19 @@ export class NodeStatsService {
             freeSpace,
             freeSpacePercent,
           });
-        });
-
-        df.on('error', (error: Error) => {
-          reject(error);
-        });
+        } catch (parseError) {
+          reject(
+            new Error(
+              `Failed to parse disk space output: ${parseError.message}`,
+            ),
+          );
+        }
       });
-    } catch (error) {
-      this.logger.warn('Could not get disk space info, using fallback');
-      return {
-        totalSpace: 1000000000000, // 1TB fallback
-        freeSpace: 500000000000, // 500GB fallback
-        freeSpacePercent: 50,
-      };
-    }
+
+      process_spawn.on('error', (error: Error) => {
+        reject(error);
+      });
+    });
   }
 
   /**

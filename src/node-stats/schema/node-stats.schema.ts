@@ -57,6 +57,9 @@ export class NodeSystemStatsDto {
   @ApiProperty({ description: 'Human readable free disk space' })
   freeDiskSpaceFormatted: string;
 
+  @ApiProperty({ description: 'Human readable used disk space' })
+  usedDiskSpaceFormatted: string;
+
   @ApiProperty({ description: 'System uptime in seconds' })
   uptime: number;
 
@@ -69,11 +72,17 @@ export class NodeSystemStatsDto {
   @ApiProperty({ description: 'Free memory in bytes' })
   freeMemory: number;
 
+  @ApiProperty({ description: 'Used memory in bytes' })
+  usedMemory: number;
+
   @ApiProperty({ description: 'Human readable total memory' })
   totalMemoryFormatted: string;
 
   @ApiProperty({ description: 'Human readable free memory' })
   freeMemoryFormatted: string;
+
+  @ApiProperty({ description: 'Human readable used memory' })
+  usedMemoryFormatted: string;
 
   @ApiProperty({ description: 'CPU information', type: [Object] })
   cpus: Array<{

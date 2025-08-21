@@ -487,8 +487,12 @@ export class TelestoryAccountsService implements OnModuleInit {
               statsMessage += `• Запросов за день: **${node.requestStats.requestsLastDay}**\n`;
               const usedSpacePercent =
                 100 - node.systemStats.freeDiskSpacePercent;
+
+              const totalDiskSpace = node.systemStats.totalDiskSpaceFormatted;
+              const usedDiskSpace = node.systemStats.usedDiskSpaceFormatted;
+
               statsMessage += `• Свободно диска: **${node.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
-              statsMessage += `• Диск: **${usedSpacePercent.toFixed(1)}%**/**${node.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
+              statsMessage += `• Диск: **${usedDiskSpace}**/**${totalDiskSpace}**\n`;
               statsMessage += `• Память: **${node.systemStats.freeMemoryFormatted}**/**${node.systemStats.totalMemoryFormatted}**\n`;
               statsMessage += `• Аптайм: \`${node.systemStats.uptimeFormatted}\`\n\n`;
             }
@@ -534,9 +538,9 @@ export class TelestoryAccountsService implements OnModuleInit {
             statsMessage += `💾 **Система:**\n`;
             const usedSpacePercent =
               100 - statsData.systemStats.freeDiskSpacePercent;
-            statsMessage += `• Свободно диска: **${statsData.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
-            statsMessage += `• Диск: **${usedSpacePercent.toFixed(1)}%**/**${statsData.systemStats.freeDiskSpacePercent.toFixed(1)}%**\n`;
-            statsMessage += `• Память: **${statsData.systemStats.freeMemoryFormatted}**/**${statsData.systemStats.totalMemoryFormatted}**\n`;
+            statsMessage += `• Использовано диска: **${usedSpacePercent.toFixed(1)}%**\n`;
+            statsMessage += `• Диск: **${statsData.systemStats.usedDiskSpaceFormatted}**/**${statsData.systemStats.totalDiskSpaceFormatted}**\n`;
+            statsMessage += `• Память: **${statsData.systemStats.usedMemoryFormatted}**/**${statsData.systemStats.totalMemoryFormatted}**\n`;
             statsMessage += `• Аптайм: \`${statsData.systemStats.uptimeFormatted}\`\n`;
             statsMessage += `• CPU: **${statsData.systemStats.cpus.length}** ядер\n\n`;
 
