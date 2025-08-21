@@ -233,8 +233,11 @@ export class NodeStatsService {
    */
   private async getRemoteNodeStats(node: any): Promise<SingleNodeStatsDto> {
     try {
+      console.log(
+        `${node.apiUrl}api/node/stats`,
+      );
       const response = await firstValueFrom(
-        this.httpService.get(`${node.apiUrl}api/v1/node/stats`, {
+        this.httpService.get(`${node.apiUrl}node/stats`, {
           timeout: 10000,
           headers: {
             'User-Agent': 'TeleStory-Master-Node/1.0',
@@ -243,6 +246,8 @@ export class NodeStatsService {
           },
         }),
       );
+
+      console.log(response.data);
 
       return response.data;
     } catch (error) {
