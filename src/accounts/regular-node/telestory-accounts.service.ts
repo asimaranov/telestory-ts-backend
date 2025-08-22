@@ -701,7 +701,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     );
   }
 
-  async confirmAccountByPhone(phone: string, phoneCode: string, nodeId: string) {
+  async confirmAccountByPhone(phone: string, phoneCode: string, nodeId?: string) {
     // Normalize the phone number to ensure consistency with stored data
     const normalizedPhone = PhoneUtils.normalize(phone);
 
