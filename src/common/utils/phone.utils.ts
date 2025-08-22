@@ -10,8 +10,8 @@ export class PhoneUtils {
    * @returns Normalized phone number in E.164 format
    */
   static normalize(phoneNumber: string, defaultCountry?: CountryCode): string {
-    const phone = phoneNumber.trim().replace(/[+()\s-]/g, '')
-    if (!phone.match(/^\d+$/)) throw new MtArgumentError('Invalid phone number')
+    const phone = phoneNumber.trim().replace(/[+()\s-]/g, '');
+    if (!phone.match(/^\d+$/)) throw new MtArgumentError('Invalid phone number');
     return phone;
   }
 }

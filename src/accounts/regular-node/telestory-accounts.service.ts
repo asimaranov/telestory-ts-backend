@@ -27,6 +27,7 @@ interface AddAccountState {
   nodeId?: string;
   name?: string;
   phone?: string;
+  phoneCodeHash?: string;
   phoneCode?: string;
 }
 
@@ -247,7 +248,9 @@ export class TelestoryAccountsService implements OnModuleInit {
         await state.merge({ phone });
 
         try {
-          await this.addAccountByPhone(name!, phone);
+          const addAccountResult = await this.addAccountByPhone(name!, phone);
+          console.log('Add account result', addAccountResult);
+          await state.merge({ nodeId: addAccountResult.bindNodeId });
         } catch (error) {
           await msg.answerText(
             'Ошибка при добавлении аккаунта: ' +
@@ -699,6 +702,12 @@ export class TelestoryAccountsService implements OnModuleInit {
       },
       { upsert: true },
     );
+
+    return {
+      phone: normalizedPhone,
+      phoneCodeHash,
+      bindNodeId,
+    };
   }
 
   async confirmAccountByPhone(phone: string, phoneCode: string, nodeId?: string) {
