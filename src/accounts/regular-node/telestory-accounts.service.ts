@@ -20,6 +20,7 @@ import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
 import { PhoneUtils } from '../../common/utils/phone.utils';
 import { md } from '@mtcute/markdown-parser';
+import { start } from './start';
 
 interface AddAccountState {
   nodeId?: string;
@@ -114,10 +115,11 @@ export class TelestoryAccountsService implements OnModuleInit {
       const tg = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
-        storage: `session-${account.name}`,
+        storage: `session-${Date.now()}-${account.name}`,
       });
+      // console.log('Importing session for account', account.name);
 
-      await tg.importSession(account.sessionData);
+      // console.log('Session imported for account', account.name);
 
       const dp = Dispatcher.for(tg);
 
@@ -132,7 +134,10 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       try {
-        const self = await tg.start();
+        await start(tg, {
+          session: account.sessionData,
+        });
+        const self = await tg.getMe();
         console.log(
           `Account ${account.name} imported successfully. Account: ${self.firstName} ${self.lastName} (${self.username || 'no username'}). Id: ${self.id}`,
         );
@@ -380,7 +385,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       botDp.onNewMessage(filters.command('start'), async (msg) => {
         console.log('New message on bot', msg);
         const totalAccounts = await this.telestoryAccountData.find({
-          isActive: true,
+          // isActive: true,
           type: 'user',
         });
 
@@ -424,7 +429,9 @@ export class TelestoryAccountsService implements OnModuleInit {
                       const phoneDisplay = account.phone
                         ? `***${account.phone.slice(-4)}`
                         : 'номер не указан';
-                      return `• ${account.name} (${phoneDisplay})`;
+                      const reason =
+                        account.inactiveReason || 'причина не указана';
+                      return `• ${account.name} (${phoneDisplay}) - ${reason}`;
                     })
                     .join(
                       '\n',
