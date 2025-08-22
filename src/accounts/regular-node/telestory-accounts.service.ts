@@ -4,7 +4,7 @@ import { Mutex } from 'async-mutex';
 import { TelestoryAccountData } from '../schema/telestory-account.schema.js';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { SentCode, TelegramClient } from '@mtcute/node';
+import { SentCode, TelegramClient, tl } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
 import { NodeStatsService } from '../../node-stats/node-stats.service.js';
@@ -168,6 +168,9 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       console.log('Bot client started');
+
+      // Register bot commands with Telegram API
+      await this.registerBotCommands();
 
       const wizardScene = new WizardScene<AddAccountState>('add_account', {
         storage: new MemoryStateStorage(),
@@ -446,8 +449,6 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.log('Service nodes', this.telestoryNodesService.nodes);
         const nodes = Array.from(this.telestoryNodesService.nodes.values());
 
-        await msg.answerText(`Доступные ноды: ${nodes.length}`);
-
         const nodesKeyboard = nodes.map((node) => {
           return [
             BotKeyboard.callback(
@@ -459,7 +460,7 @@ export class TelestoryAccountsService implements OnModuleInit {
           ];
         });
 
-        await msg.answerText('Выбери ноду', {
+        await msg.answerText(`Доступные ноды: ${nodes.length}. Выбери ноду`, {
           replyMarkup: BotKeyboard.inline(nodesKeyboard),
         });
       });
@@ -593,6 +594,42 @@ export class TelestoryAccountsService implements OnModuleInit {
     }
 
     this.initialized = true;
+  }
+
+  private async registerBotCommands(): Promise<void> {
+    try {
+      const commands: tl.RawBotCommand[] = [
+        {
+          _: 'botCommand',
+          command: 'start',
+          description: 'Главная информация и статистика аккаунтов',
+        },
+        {
+          _: 'botCommand',
+          command: 'stats',
+          description: 'Показать статистику всех нод',
+        },
+        {
+          _: 'botCommand',
+          command: 'add',
+          description: 'Добавить новый аккаунт на ноду',
+        },
+      ];
+
+      // Register commands with Telegram Bot API
+      await this.botClient.call({
+        _: 'bots.setBotCommands',
+        commands: commands,
+        scope: {
+          _: 'botCommandScopeDefault',
+        },
+        langCode: 'ru',
+      });
+
+      console.log('Bot commands registered successfully:', commands);
+    } catch (error) {
+      console.error('Failed to register bot commands:', error);
+    }
   }
 
   async addAccountByPhone(name: string, phone: string) {
