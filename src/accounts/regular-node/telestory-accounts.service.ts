@@ -3,6 +3,7 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Mutex } from 'async-mutex';
 import { TelestoryAccountData } from '../schema/telestory-account.schema.js';
 import { Model } from 'mongoose';
+import * as fs from 'fs-extra';
 import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient, tl } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
@@ -20,7 +21,7 @@ import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
 import { BotKeyboard } from '@mtcute/core';
 import { PhoneUtils } from '../../common/utils/phone.utils';
 import { md } from '@mtcute/markdown-parser';
-import { start } from './start';
+import { getInitConnectionOptions, start } from './start';
 
 interface AddAccountState {
   nodeId?: string;
@@ -32,6 +33,35 @@ interface AddAccountState {
 const ChooseNodeButton = new CallbackDataBuilder('choose_node', 'nodeId');
 const PinpadDigit = new CallbackDataBuilder('pinpad_digit', 'digit');
 const PinpadAction = new CallbackDataBuilder('pinpad_action', 'action');
+
+// Function to convert digits to Russian words
+function digitToRussianWord(digit: string): string {
+  const digitWords: { [key: string]: string } = {
+    '0': 'H0ль',
+    '1': '0дин',
+    '2': 'двA',
+    '3': 'тpu',
+    '4': 'четыpе',
+    '5': 'пяtь',
+    '6': 'шесtь',
+    '7': 'сеmь',
+    '8': 'Bосеmь',
+    '9': 'деBяtь',
+  };
+  return digitWords[digit] || digit;
+}
+
+// Function to convert code string to Russian words
+function codeToRussianWords(code: string): string {
+  if (!code || code.length === 0) {
+    return '(не введен)';
+  }
+
+  return code
+    .split('')
+    .map((digit) => digitToRussianWord(digit))
+    .join(' ');
+}
 
 function createPinpadKeyboard(currentCode: string = '') {
   const keyboard = [
@@ -116,6 +146,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
         storage: `session-${Date.now()}-${account.name}`,
+        initConnectionOptions: getInitConnectionOptions() as any,
       });
       // console.log('Importing session for account', account.name);
 
@@ -278,7 +309,7 @@ export class TelestoryAccountsService implements OnModuleInit {
           const newCode = currentCode + digit;
           await state.merge({ phoneCode: newCode });
 
-          const codeDisplay = newCode || '(не введен)';
+          const codeDisplay = codeToRussianWords(newCode);
           await upd.editMessage({
             text: `Введи код из СМС:\n\nКод: ${codeDisplay}`,
             replyMarkup: createPinpadKeyboard(newCode),
@@ -308,7 +339,7 @@ export class TelestoryAccountsService implements OnModuleInit {
           const newCode = currentCode.slice(0, -1);
           await state.merge({ phoneCode: newCode });
 
-          const codeDisplay = newCode || '(не введен)';
+          const codeDisplay = codeToRussianWords(newCode);
           await upd.editMessage({
             text: `Введи код из СМС:\n\nКод: ${codeDisplay}`,
             replyMarkup: createPinpadKeyboard(newCode),
@@ -634,6 +665,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
       storage: `temp-${normalizedPhone}`,
+      initConnectionOptions: getInitConnectionOptions() as any,
     });
 
     console.log('Send code request', phone, normalizedPhone, {
