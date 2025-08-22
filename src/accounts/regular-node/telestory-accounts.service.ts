@@ -345,7 +345,7 @@ export class TelestoryAccountsService implements OnModuleInit {
             replyMarkup: createPinpadKeyboard(newCode),
           });
         } else if (action === 'submit') {
-          const { name, phone } = currentState;
+          const { name, phone, nodeId } = currentState;
           const phoneCode = currentCode;
 
           if (!phoneCode || phoneCode.length < 4) {
@@ -361,7 +361,7 @@ export class TelestoryAccountsService implements OnModuleInit {
           });
 
           try {
-            await this.confirmAccountByPhone(phone!, phoneCode);
+            await this.confirmAccountByPhone(phone!, phoneCode, nodeId);
 
             await upd.editMessage({
               text: 'Аккаунт успешно добавлен! ✅',
@@ -701,7 +701,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     );
   }
 
-  async confirmAccountByPhone(phone: string, phoneCode: string) {
+  async confirmAccountByPhone(phone: string, phoneCode: string, nodeId: string) {
     // Normalize the phone number to ensure consistency with stored data
     const normalizedPhone = PhoneUtils.normalize(phone);
 
@@ -750,7 +750,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     const account = new this.telestoryAccountData({
       name: pendingAccount.name,
       sessionData: session,
-      bindNodeId: process.env.NODE_ID,
+      bindNodeId: nodeId || process.env.NODE_ID,
       lastActive: new Date(),
       isActive: true,
       type: 'user',
