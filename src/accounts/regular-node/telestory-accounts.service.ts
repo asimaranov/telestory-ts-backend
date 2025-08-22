@@ -616,14 +616,8 @@ export class TelestoryAccountsService implements OnModuleInit {
         },
       ];
 
-      // Register commands with Telegram Bot API
-      await this.botClient.call({
-        _: 'bots.setBotCommands',
+      await this.botClient.setMyCommands({
         commands: commands,
-        scope: {
-          _: 'botCommandScopeDefault',
-        },
-        langCode: 'ru',
       });
 
       console.log('Bot commands registered successfully:', commands);
