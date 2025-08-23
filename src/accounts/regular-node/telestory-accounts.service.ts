@@ -469,7 +469,7 @@ export class TelestoryAccountsService implements OnModuleInit {
                     .slice(0, 5) // Limit to first 5
                     .map((account) => {
                       const phoneDisplay = account.phone
-                        ? `***${account.phone.slice(-4)}`
+                        ? `\*\*\*${account.phone.slice(-4)}`
                         : 'номер не указан';
                       const reason =
                         account.inactiveReason || 'причина не указана';
