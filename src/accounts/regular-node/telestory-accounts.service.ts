@@ -18,7 +18,7 @@ import {
 } from '@mtcute/dispatcher';
 import { message } from '@mtcute/core/utils/links/chat.js';
 import { WizardScene, WizardSceneAction } from '@mtcute/dispatcher';
-import { BotKeyboard } from '@mtcute/core';
+import { BotKeyboard, MemoryStorage } from '@mtcute/core';
 import { PhoneUtils } from '../../common/utils/phone.utils';
 import { md } from '@mtcute/markdown-parser';
 import { getInitConnectionOptions, start } from './start';
@@ -117,6 +117,8 @@ export class TelestoryAccountsService implements OnModuleInit {
   accountsCounter = 0;
   botClient: TelegramClient;
 
+  pendingClients = new Map<string, TelegramClient>();
+
   constructor(
     private telestoryNodesService: TelestoryNodesService,
     @InjectModel(TelestoryAccountData.name)
@@ -146,8 +148,11 @@ export class TelestoryAccountsService implements OnModuleInit {
       const tg = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
-        storage: `session-${Date.now()}-${account.name}`,
+        storage: new MemoryStorage(),
         initConnectionOptions: getInitConnectionOptions() as any,
+        network: {
+          usePfs: true,
+        },
       });
       // console.log('Importing session for account', account.name);
 
@@ -191,7 +196,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       this.botClient = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
-        storage: `session-bot-${process.env.BOT_TOKEN.split(':')[0]}`,
+        storage: new MemoryStorage(),
       });
 
       console.log('Starting bot client');
@@ -667,9 +672,14 @@ export class TelestoryAccountsService implements OnModuleInit {
     const tg = new TelegramClient({
       apiId: Number(process.env.API_ID),
       apiHash: process.env.API_HASH!,
-      storage: `temp-${normalizedPhone}`,
+      storage: new MemoryStorage(),
       initConnectionOptions: getInitConnectionOptions() as any,
+      network: {
+        usePfs: true,
+      },
     });
+
+    this.pendingClients.set(normalizedPhone, tg);
 
     console.log('Send code request', phone, normalizedPhone, {
       phone: normalizedPhone,
@@ -722,11 +732,12 @@ export class TelestoryAccountsService implements OnModuleInit {
       throw new Error('Pending account not found');
     }
 
-    const tg = new TelegramClient({
-      apiId: Number(process.env.API_ID),
-      apiHash: process.env.API_HASH!,
-      storage: `temp-${normalizedPhone}`,
-    });
+    const tg = this.pendingClients.get(normalizedPhone);
+
+    if (!tg) {
+      console.log('Pending client not found', normalizedPhone);
+      throw new Error('Pending client not found');
+    }
 
     // await tg.importSession(pendingAccount.sessionData);
 
