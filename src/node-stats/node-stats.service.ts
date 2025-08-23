@@ -55,6 +55,7 @@ export class NodeStatsService {
         } else {
           // For other nodes, try to get remote stats
           stats = await this.getRemoteNodeStats(node);
+          console.log('Updating remote node stats', node, stats);
         }
 
         nodeStats.push(stats);
@@ -156,6 +157,27 @@ export class NodeStatsService {
         this.getLocalSystemStats(),
       ],
     );
+
+    if (accountsStats.status === 'fulfilled') {
+      console.log('Accounts stats', accountsStats.value);
+    }
+    if (requestStats.status === 'fulfilled') {
+      console.log('Request stats', requestStats.value);
+    }
+    if (systemStats.status === 'fulfilled') {
+      console.log('System stats', systemStats.value);
+    }
+
+    if (accountsStats.status === 'rejected') {
+      console.log('Accounts stats rejected', accountsStats.reason);
+    }
+    if (requestStats.status === 'rejected') {
+      console.log('Request stats rejected', requestStats.reason);
+    }
+    if (systemStats.status === 'rejected') {
+      console.log('System stats rejected', systemStats.reason);
+    }
+
 
     // Extract results or provide fallbacks
     const finalAccountsStats =
