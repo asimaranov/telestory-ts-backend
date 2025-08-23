@@ -456,9 +456,9 @@ export class TelestoryAccountsService implements OnModuleInit {
                     .slice(0, 10) // Limit to first 10
                     .map((account) => {
                       const phoneDisplay = account.phone
-                        ? `\*\*\*${account.phone.slice(-4)}`
+                        ? `\\*${account.phone.slice(-4)}`
                         : 'номер не указан';
-                      return `• ${account.name} (${phoneDisplay})`;
+                      return `• ${account.name} (${phoneDisplay}) ${account.bindNodeId ? `– ${account.bindNodeId}` : ''}`;
                     })
                     .join(
                       '\n',
@@ -469,7 +469,7 @@ export class TelestoryAccountsService implements OnModuleInit {
                     .slice(0, 5) // Limit to first 5
                     .map((account) => {
                       const phoneDisplay = account.phone
-                        ? `\*\*\*${account.phone.slice(-4)}`
+                        ? `\\*${account.phone.slice(-4)}`
                         : 'номер не указан';
                       const reason =
                         account.inactiveReason || 'причина не указана';
