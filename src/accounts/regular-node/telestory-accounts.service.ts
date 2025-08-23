@@ -618,6 +618,17 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       botDp.onCallbackQuery(ChooseNodeButton.filter(), async (query, state) => {
+        // check if nodeId is valid
+        const nodeId = Buffer.from(query.data!).toString();
+        if (!this.telestoryNodesService.nodes.has(nodeId)) {
+          await query.answer({
+            text: 'Неверный ID ноды',
+            alert: true,
+          });
+          return;
+        }
+
+        await state.merge({ nodeId });
         query.answer({});
         await state.enter(wizardScene);
 

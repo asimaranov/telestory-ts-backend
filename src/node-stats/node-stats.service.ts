@@ -61,6 +61,7 @@ export class NodeStatsService {
 
         // Aggregate summary data
         totalAccounts += stats.accountsStats.totalAccounts;
+        console.log('Updating totalAccounts', totalAccounts);
         totalActiveAccounts += stats.accountsStats.activeAccounts;
         totalRequestsLastDay += stats.requestStats.requestsLastDay;
         totalDiskSpaceUsed +=
