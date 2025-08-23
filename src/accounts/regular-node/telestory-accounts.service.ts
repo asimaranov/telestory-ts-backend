@@ -456,7 +456,7 @@ export class TelestoryAccountsService implements OnModuleInit {
                     .slice(0, 10) // Limit to first 10
                     .map((account) => {
                       const phoneDisplay = account.phone
-                        ? `***${account.phone.slice(-4)}`
+                        ? `\*\*\*${account.phone.slice(-4)}`
                         : 'номер не указан';
                       return `• ${account.name} (${phoneDisplay})`;
                     })
