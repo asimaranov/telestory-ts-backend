@@ -359,6 +359,8 @@ export class TelestoryAccountsService implements OnModuleInit {
             replyMarkup: createPinpadKeyboard(newCode),
           });
         } else if (action === 'submit') {
+          const currentState = (await state.get()) as AddAccountState;
+
           const { name, phone, nodeId } = currentState;
           const phoneCode = currentCode;
 
