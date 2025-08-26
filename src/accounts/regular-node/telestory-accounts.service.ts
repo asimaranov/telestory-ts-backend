@@ -261,7 +261,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         try {
           const addAccountResult = await this.addAccountByPhone(name!, phone);
           console.log('Add account result', addAccountResult);
-          await state.merge({ nodeId: addAccountResult.bindNodeId });
+          // await state.merge({ nodeId: addAccountResult.bindNodeId });
         } catch (error) {
           await msg.answerText(
             'Ошибка при добавлении аккаунта: ' +
@@ -316,6 +316,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.log('Pinpad digit', upd);
         const { digit } = PinpadDigit.parse(Buffer.from(upd.data!).toString());
         const currentState = (await state.get()) as AddAccountState;
+        console.log('Current state', currentState);
         const currentCode = currentState.phoneCode || '';
 
         if (currentCode.length < 10) {
@@ -359,9 +360,8 @@ export class TelestoryAccountsService implements OnModuleInit {
             replyMarkup: createPinpadKeyboard(newCode),
           });
         } else if (action === 'submit') {
-          const currentState = (await state.get()) as AddAccountState;
-
-          const { name, phone, nodeId } = currentState;
+          const { nodeId, phone } = (await state.get()) as AddAccountState;
+          console.log('Node id', nodeId);
           const phoneCode = currentCode;
 
           if (!phoneCode || phoneCode.length < 4) {
