@@ -619,8 +619,13 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       botDp.onCallbackQuery(ChooseNodeButton.filter(), async (query, state) => {
         // check if nodeId is valid
-        const nodeId = Buffer.from(query.data!).toString();
-        if (!this.telestoryNodesService.nodes.has(nodeId)) {
+        const nodeId = query.match.nodeId;
+
+        if (
+          !Array.from(this.telestoryNodesService.nodes.values())
+            .map((x) => x.name)
+            .includes(nodeId)
+        ) {
           await query.answer({
             text: 'Неверный ID ноды',
             alert: true,
@@ -628,7 +633,7 @@ export class TelestoryAccountsService implements OnModuleInit {
           return;
         }
 
-        await state.merge({ nodeId });
+        await state.merge({ nodeId }, { fallback: {} });
         query.answer({});
         await state.enter(wizardScene);
 
@@ -731,7 +736,11 @@ export class TelestoryAccountsService implements OnModuleInit {
     };
   }
 
-  async confirmAccountByPhone(phone: string, phoneCode: string, nodeId?: string) {
+  async confirmAccountByPhone(
+    phone: string,
+    phoneCode: string,
+    nodeId?: string,
+  ) {
     // Normalize the phone number to ensure consistency with stored data
     const normalizedPhone = PhoneUtils.normalize(phone);
 
