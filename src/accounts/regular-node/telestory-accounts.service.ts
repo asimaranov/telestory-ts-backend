@@ -118,6 +118,7 @@ export class TelestoryAccountsService implements OnModuleInit {
   botClient: TelegramClient;
 
   pendingClients = new Map<string, TelegramClient>();
+  tmpNodeId: string;
 
   constructor(
     private telestoryNodesService: TelestoryNodesService,
@@ -215,7 +216,7 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       wizardScene.addStep(async (msg, state) => {
         console.log('Add account name', msg.text);
-        await state.merge({ name: msg.text }, { fallback: {} });
+        await state.merge({ name: msg.text, nodeId: this.tmpNodeId }, { fallback: {} });
 
         const { nodeId } = (await state.get()) as AddAccountState;
 
@@ -638,13 +639,10 @@ export class TelestoryAccountsService implements OnModuleInit {
           return;
         }
 
-        await state.merge({ nodeId }, { fallback: {} });
         query.answer({});
-        await state.enter(wizardScene, {
-          with: {
-            nodeId,
-          } as AddAccountState,
-        });
+        this.tmpNodeId = nodeId;
+        await state.enter(wizardScene);
+        // await state.merge({ nodeId }, { fallback: {} });
 
         await query.editMessage({
           text: `Введи имя аккаунта. Аккаунт добавится на ноду ${nodeId}`,
