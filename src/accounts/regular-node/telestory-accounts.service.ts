@@ -217,7 +217,9 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.log('Add account name', msg.text);
         await state.merge({ name: msg.text }, { fallback: {} });
 
-        await msg.answerText('Введи номер телефона', {
+        const { nodeId } = (await state.get()) as AddAccountState;
+
+        await msg.answerText(`Введи номер телефона. Аккаунт добавится на ноду ${nodeId}`, {
           replyMarkup: BotKeyboard.inline([
             [BotKeyboard.callback('Cancel', 'CANCEL')],
           ]),
@@ -372,7 +374,7 @@ export class TelestoryAccountsService implements OnModuleInit {
             await this.confirmAccountByPhone(phone!, phoneCode, nodeId);
 
             await upd.editMessage({
-              text: 'Аккаунт успешно добавлен! ✅',
+              text: `Аккаунт успешно добавлен на ноду ${nodeId}! ✅`,
             });
 
             await state.exit();
@@ -638,7 +640,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         await state.enter(wizardScene);
 
         await query.editMessage({
-          text: 'Введи имя аккаунта',
+          text: `Введи имя аккаунта. Аккаунт добавится на ноду ${nodeId}`,
           replyMarkup: BotKeyboard.inline([
             [BotKeyboard.callback('Cancel', 'CANCEL')],
           ]),
