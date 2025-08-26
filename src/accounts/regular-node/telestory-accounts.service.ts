@@ -219,11 +219,14 @@ export class TelestoryAccountsService implements OnModuleInit {
 
         const { nodeId } = (await state.get()) as AddAccountState;
 
-        await msg.answerText(`Введи номер телефона. Аккаунт добавится на ноду ${nodeId}`, {
-          replyMarkup: BotKeyboard.inline([
-            [BotKeyboard.callback('Cancel', 'CANCEL')],
-          ]),
-        });
+        await msg.answerText(
+          `Введи номер телефона. Аккаунт добавится на ноду ${nodeId}`,
+          {
+            replyMarkup: BotKeyboard.inline([
+              [BotKeyboard.callback('Cancel', 'CANCEL')],
+            ]),
+          },
+        );
 
         return WizardSceneAction.Next;
       });
@@ -637,7 +640,11 @@ export class TelestoryAccountsService implements OnModuleInit {
 
         await state.merge({ nodeId }, { fallback: {} });
         query.answer({});
-        await state.enter(wizardScene);
+        await state.enter(wizardScene, {
+          with: {
+            nodeId,
+          } as AddAccountState,
+        });
 
         await query.editMessage({
           text: `Введи имя аккаунта. Аккаунт добавится на ноду ${nodeId}`,
