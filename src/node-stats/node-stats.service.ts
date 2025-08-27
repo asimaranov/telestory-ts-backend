@@ -54,8 +54,16 @@ export class NodeStatsService {
           stats = await this.getCurrentNodeStats();
         } else {
           // For other nodes, try to get remote stats
-          stats = await this.getRemoteNodeStats(node);
-          console.log('Updating remote node stats', node, stats);
+          try {
+            stats = await this.getRemoteNodeStats(node);
+          } catch (error) {
+            console.log('Failed to get remote node stats', node, error);
+            // mark node as inactive
+            node.approvedByMasterNode = false;
+            node.isActive = false;
+            await node.save();
+            continue;
+          }
         }
 
         nodeStats.push(stats);
@@ -262,6 +270,7 @@ export class NodeStatsService {
    */
   private async getRemoteNodeStats(node: any): Promise<SingleNodeStatsDto> {
     try {
+      console.log('Getting remote node stats', node);
       const response = await firstValueFrom(
         this.httpService.get(`${node.apiUrl}node/stats`, {
           timeout: 10000,
