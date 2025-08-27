@@ -124,7 +124,7 @@ export class AppController {
     try {
       const response = await firstValueFrom(
         this.httpService.get(
-          `${bestNode.apiUrl}/get_stories_by_username_direct`,
+          `${bestNode.apiUrl}get_stories_by_username_direct`,
           {
             params: {
               api_key: query.api_key,
@@ -192,6 +192,7 @@ export class AppController {
     const availableNodes = nodes.filter(
       (node) =>
         node.isActive &&
+        !!node.apiUrl &&
         // node.approvedByMasterNode &&
         (!isPremium || node.type === 'premium' || node.type === 'free'), // Premium requests can use any node, but prefer premium
     );
