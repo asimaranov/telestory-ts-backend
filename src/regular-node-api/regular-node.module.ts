@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { HttpModule } from '@nestjs/axios';
 import { join } from 'path';
 import { AccountsModule } from '../accounts/accounts.module.js';
 import { NodesModule } from '../nodes/nodes.module.js';
@@ -23,6 +24,12 @@ import { NodeStatsModule } from '../node-stats/node-stats.module.js';
         index: false,
         fallthrough: false,
       },
+    }),
+    HttpModule.registerAsync({
+      useFactory: () => ({
+        timeout: 10000,
+        maxRedirects: 5,
+      }),
     }),
     AccountsModule,
     NodesModule,
