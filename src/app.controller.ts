@@ -192,7 +192,7 @@ export class AppController {
     const availableNodes = nodes.filter(
       (node) =>
         node.isActive &&
-        node.approvedByMasterNode &&
+        // node.approvedByMasterNode &&
         (!isPremium || node.type === 'premium' || node.type === 'free'), // Premium requests can use any node, but prefer premium
     );
 
