@@ -444,6 +444,182 @@ export class DownloaderService implements OnModuleInit {
     return storiesData;
   }
 
+  /**
+   * Benchmarks different download methods to compare their performance
+   *
+   * This method tests all available download methods from @mtcute/node:
+   * - downloadToFile: Direct file download (most straightforward)
+   * - downloadAsNodeStream: Returns a Node.js readable stream
+   * - downloadAsIterable: Returns an async iterable of chunks
+   * - downloadAsStream: Returns an async iterable stream
+   * - downloadAsBuffer: Downloads entire file into memory as Buffer
+   *
+   * The benchmark runs each method sequentially and reports:
+   * - Execution time in milliseconds
+   * - File size for verification
+   * - Success/failure status
+   * - Ranking from fastest to slowest
+   *
+   * @param tg - Telegram client instance
+   * @param fileId - File ID to download
+   * @param baseFilePath - Base file path for test files (without extension)
+   */
+  private async benchmarkDownloadMethods(
+    tg: TelegramClient,
+    fileId: string,
+    baseFilePath: string,
+  ): Promise<void> {
+    console.log('\n=== Starting Download Methods Benchmark ===');
+    console.log(`File ID: ${fileId}`);
+
+    const methods = [
+      'downloadToFile',
+      'downloadAsNodeStream',
+      'downloadAsIterable',
+      'downloadAsStream',
+      'downloadAsBuffer',
+    ];
+
+    const results: {
+      method: string;
+      time: number;
+      success: boolean;
+      error?: string;
+    }[] = [];
+
+    for (const method of methods) {
+      const testFilePath = `${baseFilePath}_test_${method}`;
+      let startTime: number = 0;
+      let endTime: number;
+      let success = false;
+      let error: string | undefined;
+
+      try {
+        console.log(`\nTesting ${method}...`);
+        startTime = Date.now();
+
+        switch (method) {
+          case 'downloadToFile':
+            await tg.downloadToFile(testFilePath, fileId);
+            success = true;
+            break;
+
+          case 'downloadAsNodeStream':
+            const nodeStream = tg.downloadAsNodeStream(fileId);
+            const writeStream = fs.createWriteStream(testFilePath);
+            await new Promise<void>((resolve, reject) => {
+              nodeStream.pipe(writeStream);
+              nodeStream.on('end', resolve);
+              nodeStream.on('error', reject);
+              writeStream.on('error', reject);
+            });
+            success = true;
+            break;
+
+          case 'downloadAsIterable':
+            const iterable = tg.downloadAsIterable(fileId);
+            await fs.promises.writeFile(testFilePath, ''); // Create empty file
+            for await (const chunk of iterable) {
+              await fs.promises.appendFile(testFilePath, chunk);
+            }
+            success = true;
+            break;
+
+          case 'downloadAsStream':
+            const stream = tg.downloadAsStream(fileId);
+            await fs.promises.writeFile(testFilePath, ''); // Create empty file
+            for await (const chunk of stream) {
+              await fs.promises.appendFile(testFilePath, chunk);
+            }
+            success = true;
+            break;
+
+          case 'downloadAsBuffer':
+            const buffer = await tg.downloadAsBuffer(fileId);
+            await fs.promises.writeFile(testFilePath, buffer);
+            success = true;
+            break;
+        }
+
+        endTime = Date.now();
+        const duration = endTime - startTime;
+
+        results.push({
+          method,
+          time: duration,
+          success,
+        });
+
+        // Get file size for context
+        const stats = fs.existsSync(testFilePath)
+          ? fs.statSync(testFilePath)
+          : null;
+        const fileSize = stats ? stats.size : 0;
+        console.log(`${method}: ${duration}ms ✓ (${fileSize} bytes)`);
+      } catch (err) {
+        endTime = Date.now();
+        const duration = endTime - startTime;
+        error = err instanceof Error ? err.message : String(err);
+
+        results.push({
+          method,
+          time: duration,
+          success: false,
+          error,
+        });
+
+        console.log(`${method}: ${duration}ms ✗ (${error})`);
+      }
+
+      // Clean up test file
+      try {
+        if (fs.existsSync(testFilePath)) {
+          await fs.promises.unlink(testFilePath);
+        }
+      } catch (cleanupError) {
+        console.warn(`Failed to cleanup ${testFilePath}:`, cleanupError);
+      }
+    }
+
+    // Display benchmark results
+    console.log('\n=== Benchmark Results ===');
+    const successfulResults = results.filter((r) => r.success);
+
+    if (successfulResults.length > 0) {
+      // Sort by time (fastest first)
+      successfulResults.sort((a, b) => a.time - b.time);
+
+      console.log('Successful downloads (fastest to slowest):');
+      successfulResults.forEach((result, index) => {
+        const rank = index + 1;
+        const speedDiff =
+          index === 0 ? '' : ` (+${result.time - successfulResults[0].time}ms)`;
+        console.log(`${rank}. ${result.method}: ${result.time}ms${speedDiff}`);
+      });
+
+      const fastest = successfulResults[0];
+      const slowest = successfulResults[successfulResults.length - 1];
+      const speedImprovement = (
+        ((slowest.time - fastest.time) / slowest.time) *
+        100
+      ).toFixed(1);
+
+      console.log(
+        `\nFastest method: ${fastest.method} (${speedImprovement}% faster than slowest)`,
+      );
+    }
+
+    const failedResults = results.filter((r) => !r.success);
+    if (failedResults.length > 0) {
+      console.log('\nFailed downloads:');
+      failedResults.forEach((result) => {
+        console.log(`- ${result.method}: ${result.error}`);
+      });
+    }
+
+    console.log('=== End Benchmark ===\n');
+  }
+
   async getStoryByUsername(
     username: string,
     archive: boolean = false,
@@ -660,11 +836,16 @@ export class DownloaderService implements OnModuleInit {
               storyFilePath,
             );
 
+            // Benchmark different download methods (only if enabled)
+            // await this.benchmarkDownloadMethods(
+            //   tg,
+            //   story.content.fileId,
+            //   storyFilePath,
+            // );
+
+            // Use the fastest method (replace with actual download)
             // await tg.downloadToFile(storyFilePath, story.content.fileId);
-            const stream = tg.downloadAsIterable(story.content.fileId);
-            for await (const chunk of stream) {
-              await fs.promises.appendFile(storyFilePath, chunk);
-            }
+            await tg.downloadToFile(story.content.fileId, storyFilePath);
 
             console.log('Downloaded story', story.content.fileId);
           } catch (error) {

@@ -152,7 +152,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         storage: new MemoryStorage(),
         initConnectionOptions: getInitConnectionOptions() as any,
         network: {
-          usePfs: true,
+          // usePfs: true,
         },
       });
       // console.log('Importing session for account', account.name);
@@ -197,13 +197,14 @@ export class TelestoryAccountsService implements OnModuleInit {
       this.botClient = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
-        storage: new MemoryStorage(),
+        storage: 'bot_storage',
       });
 
       console.log('Starting bot client');
-      await this.botClient.start({
-        botToken: process.env.BOT_TOKEN,
-      });
+      // await this.botClient.start({
+      //   botToken: process.env.BOT_TOKEN,
+        
+      // });
 
       console.log('Bot client started');
 
@@ -703,7 +704,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       storage: new MemoryStorage(),
       initConnectionOptions: getInitConnectionOptions() as any,
       network: {
-        usePfs: true,
+        // usePfs: true,
       },
     });
 
