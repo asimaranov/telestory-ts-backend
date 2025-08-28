@@ -22,11 +22,11 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@mtcute/convert": "^0.25.7",
+    "@mtcute/convert": "^0.25.8",
     "@mtcute/core": "^0.25.7",
-    "@mtcute/dispatcher": "^0.25.7",
+    "@mtcute/dispatcher": "^0.25.8",
     "@mtcute/markdown-parser": "^0.25.8",
-    "@mtcute/node": "^0.25.7",
+    "@mtcute/node": "^0.25.8",
     "@mtcute/tl": "^211.0.0",
     "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^11.0.1",

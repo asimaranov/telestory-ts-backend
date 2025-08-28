@@ -654,8 +654,9 @@ export class DownloaderService implements OnModuleInit {
           console.log('Log 1:', storyFilePath);
 
           try {
+            console.log('Downloading story', story.content.fileId, storyFilePath);
 
-          await tg.downloadToFile(storyFilePath, story.content.fileId);
+            await tg.downloadToFile(storyFilePath, story.content.fileId);
           } catch (error) {
             console.log('Failed to download story', error);
           }
