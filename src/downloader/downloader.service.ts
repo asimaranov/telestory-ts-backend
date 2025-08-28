@@ -645,6 +645,7 @@ export class DownloaderService implements OnModuleInit {
             username: username,
             stories: cachedData.storiesData,
             never_created: cachedData.neverCreated,
+            base_url: process.env.NODE_API_URL?.replace(/\/$/, ''),
           };
         }
       } catch (error) {
@@ -758,6 +759,7 @@ export class DownloaderService implements OnModuleInit {
               username: username,
               stories: [],
               never_created: true,
+              base_url: process.env.NODE_API_URL?.replace(/\/$/, ''),
             };
           }
         }
@@ -886,6 +888,7 @@ export class DownloaderService implements OnModuleInit {
                 expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
                 cacheKey,
                 never_created: false,
+                base_url: process.env.NODE_API_URL?.replace(/\/$/, ''),
               },
               { upsert: true, new: true },
             );
@@ -901,6 +904,8 @@ export class DownloaderService implements OnModuleInit {
           username: username,
           stories: media,
           never_created: false,
+          base_url: process.env.NODE_API_URL?.replace(/\/$/, ''),
+
         };
       });
     } catch (error) {
