@@ -808,7 +808,7 @@ export class DownloaderService implements OnModuleInit {
             fs.readdirSync(storyFolder).length > 0
           ) {
             media.push({
-              url: `static/${fileUniqueId}/${fs.readdirSync(storyFolder)[0]}`,
+              url: `downloads/${fileUniqueId}/${fs.readdirSync(storyFolder)[0]}`,
               ...story.meta,
               skipped: story.id in skippedStories.map((story) => story.id),
             });
@@ -847,7 +847,7 @@ export class DownloaderService implements OnModuleInit {
 
             // Use the fastest method (replace with actual download)
             // await tg.downloadToFile(storyFilePath, story.content.fileId);
-            await tg.downloadToFile(story.content.fileId, storyFilePath);
+            await tg.downloadToFile(storyFilePath, story.content.fileId);
 
             console.log('Downloaded story', story.content.fileId);
           } catch (error) {
@@ -905,7 +905,6 @@ export class DownloaderService implements OnModuleInit {
           stories: media,
           never_created: false,
           base_url: process.env.NODE_API_URL?.replace(/\/$/, ''),
-
         };
       });
     } catch (error) {
