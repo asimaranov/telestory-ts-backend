@@ -207,7 +207,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         });
       } catch (error) {
         console.error('Error starting bot client', error);
-        throw error;
+        // throw error;
       }
 
       console.log('Bot client started');
