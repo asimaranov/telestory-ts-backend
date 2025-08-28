@@ -201,10 +201,14 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       console.log('Starting bot client');
-      // await this.botClient.start({
-      //   botToken: process.env.BOT_TOKEN,
-        
-      // });
+      try {
+        await this.botClient.start({
+          botToken: process.env.BOT_TOKEN,
+        });
+      } catch (error) {
+        console.error('Error starting bot client', error);
+        throw error;
+      }
 
       console.log('Bot client started');
 
