@@ -654,15 +654,19 @@ export class DownloaderService implements OnModuleInit {
           console.log('Log 1:', storyFilePath);
 
           try {
-            console.log('Downloading story', story.content.fileId, storyFilePath);
+            console.log(
+              'Downloading story',
+              story.content.fileId,
+              storyFilePath,
+            );
 
             // await tg.downloadToFile(storyFilePath, story.content.fileId);
-            const stream = await tg.downloadAsNodeStream(story.content.fileId);
-            stream.pipe(fs.createWriteStream(storyFilePath));
-            await new Promise((resolve, reject) => {
-              stream.on('end', resolve);
-              stream.on('error', reject);
-            });
+            const stream = tg.downloadAsIterable(story.content.fileId);
+            for await (const chunk of stream) {
+              await fs.promises.appendFile(storyFilePath, chunk);
+            }
+
+            console.log('Downloaded story', story.content.fileId);
           } catch (error) {
             console.log('Failed to download story', error);
           }
