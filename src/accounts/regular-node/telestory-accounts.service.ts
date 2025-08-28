@@ -153,9 +153,6 @@ export class TelestoryAccountsService implements OnModuleInit {
         initConnectionOptions: getInitConnectionOptions() as any,
         network: {
           usePfs: true,
-          timeout: 30000, // 30 seconds timeout for network operations
-          retryCount: 3, // Retry failed requests up to 3 times
-          retryDelay: 1000, // 1 second delay between retries
         },
       });
       // console.log('Importing session for account', account.name);
