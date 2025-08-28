@@ -653,7 +653,12 @@ export class DownloaderService implements OnModuleInit {
           const storyFilePath = path.join(storyFolder, generatedFileName);
           console.log('Log 1:', storyFilePath);
 
+          try {
+
           await tg.downloadToFile(storyFilePath, story.content.fileId);
+          } catch (error) {
+            console.log('Failed to download story', error);
+          }
           console.log('Log 2:', storyFilePath);
 
           // const metaFilePath = path.join(process.cwd(), 'stories', fileUniqueId, 'meta.json');
