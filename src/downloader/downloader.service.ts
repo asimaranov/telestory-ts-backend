@@ -674,8 +674,11 @@ export class DownloaderService implements OnModuleInit {
           console.log('Log 3:', storyFilePath);
         }
 
+        console.log('Media', media);
+
         // Cache the results for non-premium users (skip cache for premium users and markAsRead requests)
         if (!premium && !markAsRead && media.length > 0) {
+          console.log('Caching stories for username:', username);
           try {
             // Save to cache with 10-minute expiration
             await this.storiesCache.findOneAndUpdate(

@@ -153,6 +153,8 @@ export class AppController {
         error.message,
       );
 
+
+
       // Fallback to local processing if remote node fails
       console.log('Falling back to local processing');
 
@@ -167,6 +169,11 @@ export class AppController {
         storyIds,
         premium,
       );
+
+      // Mark node as inactive
+      bestNode.approvedByMasterNode = false;
+      bestNode.isActive = false;
+      await bestNode.save();
 
       return {
         ...result,

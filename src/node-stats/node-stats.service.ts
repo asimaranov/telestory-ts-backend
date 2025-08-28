@@ -186,7 +186,6 @@ export class NodeStatsService {
       console.log('System stats rejected', systemStats.reason);
     }
 
-
     // Extract results or provide fallbacks
     const finalAccountsStats =
       accountsStats.status === 'fulfilled'
@@ -405,7 +404,7 @@ export class NodeStatsService {
     const uptimeSeconds = Math.floor(os.uptime());
     const totalMemoryBytes = os.totalmem();
     const freeMemoryBytes = os.freemem();
-    
+
     // Calculate used space and memory
     const usedDiskSpace = diskSpaceInfo.totalSpace - diskSpaceInfo.freeSpace;
     const usedMemoryBytes = totalMemoryBytes - freeMemoryBytes;
