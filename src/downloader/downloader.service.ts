@@ -296,7 +296,11 @@ export class DownloaderService implements OnModuleInit {
       limit,
     });
 
-    if (usersQuery.users.length === 0) {
+    console.log('usersQuery', usersQuery);
+
+    const queriesEntities = [...usersQuery.users, ...usersQuery.chats];
+
+    if (queriesEntities.length === 0) {
       await this.invalidUsernames.create({
         username,
         lastChecked: new Date(),
@@ -306,7 +310,7 @@ export class DownloaderService implements OnModuleInit {
       });
     }
 
-    for (const user of usersQuery.users) {
+    for (const user of queriesEntities) {
       const userData = user as tl.RawUser;
 
       if (userData.username) {
@@ -336,14 +340,13 @@ export class DownloaderService implements OnModuleInit {
     });
   }
 
-  private async getPinnedStories(tg: TelegramClient, peer: tl.RawUser) {
+  private async getPinnedStories(
+    tg: TelegramClient,
+    inputPeer: tl.RawInputPeerUser | tl.RawInputPeerChannel,
+  ) {
     const pinnedStories = await tg.call({
       _: 'stories.getPinnedStories',
-      peer: {
-        _: 'inputPeerUser',
-        userId: peer.id,
-        accessHash: peer.accessHash!,
-      },
+      peer: inputPeer,
       offsetId: 0,
       limit: 10,
     });
@@ -352,29 +355,24 @@ export class DownloaderService implements OnModuleInit {
 
   private async getStoriesByIds(
     tg: TelegramClient,
-    peer: tl.RawUser,
+    inputPeer: tl.RawInputPeerUser | tl.RawInputPeerChannel,
     storyIds: string[],
   ) {
     const story = await tg.call({
       _: 'stories.getStoriesByID',
       id: storyIds.map((id) => parseInt(id)),
-      peer: {
-        _: 'inputPeerUser',
-        userId: peer.id,
-        accessHash: peer.accessHash!,
-      },
+      peer: inputPeer,
     });
     return story.stories;
   }
 
-  private async getPeerStories(tg: TelegramClient, peer: tl.RawUser) {
+  private async getPeerStories(
+    tg: TelegramClient,
+    inputPeer: tl.RawInputPeerUser | tl.RawInputPeerChannel,
+  ) {
     const story = await tg.call({
       _: 'stories.getPeerStories',
-      peer: {
-        _: 'inputPeerUser',
-        userId: peer.id,
-        accessHash: peer.accessHash!,
-      },
+      peer: inputPeer,
     });
     return story.stories.stories;
   }
@@ -654,8 +652,11 @@ export class DownloaderService implements OnModuleInit {
       }
     }
 
-    const { account: tg, mutex } =
-      await this.telestoryAccountsService.getNextAccount();
+    const {
+      account: tg,
+      mutex,
+      accountData,
+    } = await this.telestoryAccountsService.getNextAccount();
 
     try {
       return await mutex.runExclusive(async () => {
@@ -684,8 +685,28 @@ export class DownloaderService implements OnModuleInit {
           );
         }
 
-        if (resolvedPeer.status === undefined) {
+        console.log('Resolved peer', resolvedPeer);
+
+        if (
+          resolvedPeer.status === undefined &&
+          (resolvedPeer._ as any) != 'channel'
+        ) {
           console.log('Account is banned by user');
+
+          // Record the ban information
+          const bannedByPhone = username.match(/^\d+$/) ? username : undefined;
+          const bannedByUsername = bannedByPhone ? username : username;
+          const bannedByUserId = resolvedPeer.id
+            ? resolvedPeer.id.toString()
+            : undefined;
+
+          await this.telestoryAccountsService.recordAccountBan(
+            (accountData._id as string).toString(),
+            bannedByUsername,
+            bannedByUserId,
+            bannedByPhone,
+          );
+
           throw new Error('ACCOUNT_BANNED_BY_USER');
         }
 
@@ -693,48 +714,53 @@ export class DownloaderService implements OnModuleInit {
 
         let stories: tl.TypeStoryItem[] = [];
 
+        const inputPeer =
+          (resolvedPeer._ as any) === 'user'
+            ? {
+                _: 'inputPeerUser' as 'inputPeerUser',
+                userId: resolvedPeer.id,
+                accessHash: resolvedPeer.accessHash!,
+              }
+            : {
+                _: 'inputPeerChannel' as 'inputPeerChannel',
+                channelId: resolvedPeer.id,
+                accessHash: resolvedPeer.accessHash!,
+              } as tl.RawInputPeerUser | tl.RawInputPeerChannel;
+
         if (archive) {
           stories = (await this.getPinnedStories(
             tg,
-            resolvedPeer,
+            inputPeer,
           )) as tl.TypeStoryItem[];
         } else if (storyIds.length > 0) {
           stories = (await this.getStoriesByIds(
             tg,
-            resolvedPeer,
+            inputPeer,
             storyIds,
           )) as tl.TypeStoryItem[];
         } else {
           stories = (await this.getPeerStories(
             tg,
-            resolvedPeer,
+            inputPeer,
           )) as unknown as tl.TypeStoryItem[];
         }
 
         console.log('Mark as read', markAsRead);
 
         try {
-          if (markAsRead) {
+          if (markAsRead && inputPeer._ != 'inputPeerChannel') {
             if (archive) {
               const incrementStoryViews = await tg.call({
                 _: 'stories.incrementStoryViews',
                 id: stories.map((story) => story.id),
-                peer: {
-                  _: 'inputPeerUser',
-                  userId: resolvedPeer.id,
-                  accessHash: resolvedPeer.accessHash!,
-                },
+                peer: inputPeer,
               });
               console.log('Increment story views', incrementStoryViews);
             } else {
               await tg.call({
                 _: 'stories.readStories',
                 maxId: 2 ** 16 - 1,
-                peer: {
-                  _: 'inputPeerUser',
-                  userId: resolvedPeer.id,
-                  accessHash: resolvedPeer.accessHash!,
-                },
+                peer: inputPeer,
               });
             }
           }
@@ -775,7 +801,7 @@ export class DownloaderService implements OnModuleInit {
         if (skippedStories.length > 0) {
           resolvedSkippedStories = await this.getStoriesByIds(
             tg,
-            resolvedPeer,
+            inputPeer,
             skippedStories.map((story) => story.id.toString()),
           );
         }

@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { TelestoryNodesService } from './nodes/nodes.service';
 import { NodeStatsService } from './node-stats/node-stats.service';
 import { firstValueFrom } from 'rxjs';
+import { TelestoryAccountsService } from './accounts/regular-node/telestory-accounts.service';
 
 export class GetStoriesByUsernameQueryDto {
   api_key: string;
@@ -14,6 +15,11 @@ export class GetStoriesByUsernameQueryDto {
   mark?: string;
   premium?: string;
   story_ids?: string;
+}
+
+export class GetUserIdByUsernameQueryDto {
+  api_key: string;
+  username: string;
 }
 
 @ApiTags('app')
@@ -25,6 +31,7 @@ export class AppController {
     private readonly httpService: HttpService,
     private readonly nodesService: TelestoryNodesService,
     private readonly nodeStatsService: NodeStatsService,
+    private readonly telestoryAccountsService: TelestoryAccountsService,
   ) {}
 
   @Get()
@@ -436,5 +443,107 @@ export class AppController {
     );
 
     return stories;
+  }
+
+  @Get('get_user_id_by_username')
+  @ApiOperation({
+    summary: 'Get user ID by username or phone number',
+    description:
+      'Resolves a username or phone number to get the corresponding Telegram user ID and actual username',
+  })
+  @ApiQuery({
+    name: 'api_key',
+    description: 'API key for authentication',
+    required: true,
+  })
+  @ApiQuery({
+    name: 'username',
+    description: 'Username or phone number to resolve',
+    required: true,
+  })
+  @ApiResponse({ status: 200, description: 'User ID retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async getUserIdByUsername(@Query() query: GetUserIdByUsernameQueryDto) {
+    try {
+      // Validate API key
+      if (!query.api_key) {
+        return { ok: false, error: 'API key is required' };
+      }
+
+      if (query.api_key !== process.env.API_KEY) {
+        return { ok: false, error: 'Invalid api token' };
+      }
+
+      if (!query.username) {
+        return { ok: false, error: 'Username is required' };
+      }
+
+      // Get next account and bot client
+      const { account: client } = await this.telestoryAccountsService.getNextAccount();
+      
+      let userId: number;
+      let actualUsername: string | undefined = query.username;
+
+      if (query.username.match(/^\d+$/)) {
+        // Handle phone number
+        try {
+          const contacts = await client.importContacts([
+            {
+              phone: `+${query.username}`,
+              firstName: query.username,
+              lastName: query.username,
+            },
+          ]);
+
+          if (!contacts.users || contacts.users.length === 0) {
+            return { ok: false, error: 'Invalid phone number' };
+          }
+
+          const user = contacts.users[0];
+          userId = user.id;
+          actualUsername = (user as any).username;
+        } catch (error) {
+          console.error('Error importing contact:', error);
+          return { 
+            ok: false, 
+            error: 'Unknown error', 
+            error_debug: error.message 
+          };
+        }
+      } else {
+        // Handle username
+        try {
+          const resolvedPeer = await client.resolvePeer(query.username);
+          
+          if (resolvedPeer._ === 'inputPeerUser') {
+            userId = resolvedPeer.userId;
+            // We already have the username from the query
+            actualUsername = query.username.replace(/^@/, '');
+          } else {
+            return { ok: false, error: 'Not a user' };
+          }
+        } catch (error) {
+          console.error('Error resolving username:', error);
+          return { 
+            ok: false, 
+            error: 'Unknown error', 
+            error_debug: error.message 
+          };
+        }
+      }
+
+      return {
+        ok: true,
+        user_id: userId,
+        username: actualUsername,
+      };
+    } catch (error) {
+      console.error('Error in getUserIdByUsername:', error);
+      return { 
+        ok: false, 
+        error: 'Unknown error', 
+        error_debug: error.message 
+      };
+    }
   }
 }

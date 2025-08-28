@@ -8,6 +8,7 @@ import { DownloadsCleanerModule } from './downloads-cleaner/downloads-cleaner.mo
 import { HttpModule } from '@nestjs/axios';
 import { NodesModule } from './nodes/nodes.module';
 import { NodeStatsModule } from './node-stats/node-stats.module';
+import { AccountsModule } from './accounts/accounts.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NodeStatsModule } from './node-stats/node-stats.module';
     }),
     NodesModule,
     NodeStatsModule,
+    AccountsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

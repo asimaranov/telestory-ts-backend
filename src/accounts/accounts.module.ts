@@ -10,6 +10,10 @@ import {
   TelestoryPendingAccountData,
   TelestoryPendingAccountDataSchema,
 } from './schema/telestory-pending-account.schema.js';
+import {
+  AccountBanData,
+  AccountBanDataSchema,
+} from './schema/account-ban.schema.js';
 import { NodeStatsModule } from '../node-stats/node-stats.module.js';
 
 @Module({
@@ -19,6 +23,10 @@ import { NodeStatsModule } from '../node-stats/node-stats.module.js';
       {
         name: TelestoryPendingAccountData.name,
         schema: TelestoryPendingAccountDataSchema,
+      },
+      {
+        name: AccountBanData.name,
+        schema: AccountBanDataSchema,
       },
     ]),
     NodesModule,

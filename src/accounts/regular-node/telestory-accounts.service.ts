@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { SentCode, TelegramClient, tl } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
+import { AccountBanData } from '../schema/account-ban.schema.js';
 import { NodeStatsService } from '../../node-stats/node-stats.service.js';
 import {
   CallbackDataBuilder,
@@ -126,6 +127,8 @@ export class TelestoryAccountsService implements OnModuleInit {
     private telestoryAccountData: Model<TelestoryAccountData>,
     @InjectModel(TelestoryPendingAccountData.name)
     private telestoryPendingAccountData: Model<TelestoryPendingAccountData>,
+    @InjectModel(AccountBanData.name)
+    private accountBanData: Model<AccountBanData>,
     @Inject(forwardRef(() => NodeStatsService))
     private nodeStatsService: NodeStatsService,
   ) {}
@@ -831,7 +834,11 @@ export class TelestoryAccountsService implements OnModuleInit {
     return { account, mutex: this.accountMutexes.get(name)! };
   }
 
-  async getNextAccount(): Promise<{ account: TelegramClient; mutex: Mutex }> {
+  async getNextAccount(): Promise<{
+    account: TelegramClient;
+    mutex: Mutex;
+    accountData: TelestoryAccountData;
+  }> {
     console.log(
       'Getting next account',
       this.accountsCounter,
@@ -848,7 +855,14 @@ export class TelestoryAccountsService implements OnModuleInit {
     if (!account) {
       throw new Error('Account not found');
     }
-    return { account, mutex: this.accountMutexes.get(name)! };
+
+    // Get the account document from database
+    const accountData = await this.telestoryAccountData.findOne({ name });
+    if (!accountData) {
+      throw new Error('Account data not found in database');
+    }
+
+    return { account, mutex: this.accountMutexes.get(name)!, accountData };
   }
 
   async getAccountsOnNode(): Promise<TelestoryAccountData[]> {
@@ -857,5 +871,95 @@ export class TelestoryAccountsService implements OnModuleInit {
         bindNodeId: process.env.NODE_ID,
       })
       .select('-sessionData'); // Exclude sensitive session data from response
+  }
+
+  /**
+   * Records that an account was banned by a user
+   * @param accountId - The ID of our account that got banned
+   * @param bannedByUsername - The username/phone that banned our account
+   * @param bannedByUserId - Optional Telegram user ID of the banner
+   * @param bannedByPhone - Optional phone number if resolving by phone
+   */
+  async recordAccountBan(
+    accountId: string,
+    bannedByUsername: string,
+    bannedByUserId?: string,
+    bannedByPhone?: string,
+  ): Promise<void> {
+    try {
+      // Get account info for better tracking
+      const account = await this.telestoryAccountData.findById(accountId);
+      const accountPhone = account?.phone;
+
+      const banRecord = new this.accountBanData({
+        bannedAccountId: accountId,
+        bannedAccountPhone: accountPhone,
+        bannedByUsername: bannedByUsername.toLowerCase(),
+        bannedByUserId,
+        bannedByPhone,
+        bannedAt: new Date(),
+        nodeId: process.env.NODE_ID || 'unknown',
+        banType: 'user_banned_account',
+        isActive: true,
+      });
+
+      await banRecord.save();
+
+      console.log(
+        `Recorded ban: Account ${accountId} (${accountPhone}) banned by ${bannedByUsername}`,
+      );
+    } catch (error) {
+      if (error.code === 11000) {
+        // Duplicate key error - ban already recorded
+        console.log(
+          `Ban already recorded: Account ${accountId} banned by ${bannedByUsername}`,
+        );
+      } else {
+        console.error('Failed to record account ban:', error);
+        // Don't throw error to avoid disrupting the main flow
+      }
+    }
+  }
+
+  /**
+   * Checks if an account is banned by a specific user
+   * @param accountId - The ID of our account
+   * @param username - The username to check
+   * @returns true if the account is banned by this user
+   */
+  async isAccountBannedByUser(
+    accountId: string,
+    username: string,
+  ): Promise<boolean> {
+    try {
+      const banRecord = await this.accountBanData.findOne({
+        bannedAccountId: accountId,
+        bannedByUsername: username.toLowerCase(),
+        isActive: true,
+      });
+      return !!banRecord;
+    } catch (error) {
+      console.error('Failed to check ban status:', error);
+      return false; // Default to not banned on error
+    }
+  }
+
+  /**
+   * Gets all bans for a specific account
+   * @param accountId - The ID of our account
+   * @returns List of users who banned this account
+   */
+  async getAccountBans(accountId: string): Promise<AccountBanData[]> {
+    try {
+      return await this.accountBanData
+        .find({
+          bannedAccountId: accountId,
+          isActive: true,
+        })
+        .sort({ bannedAt: -1 });
+    } catch (error) {
+      console.error('Failed to get account bans:', error);
+      return [];
+    }
   }
 }
