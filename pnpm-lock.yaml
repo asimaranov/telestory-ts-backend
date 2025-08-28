@@ -12,8 +12,8 @@ importers:
         specifier: ^0.25.8
         version: 0.25.8(@mtcute/node@0.25.8)
       '@mtcute/core':
-        specifier: ^0.25.7
-        version: 0.25.7
+        specifier: ^0.25.8
+        version: 0.25.8
       '@mtcute/dispatcher':
         specifier: ^0.25.8
         version: 0.25.8
@@ -700,9 +700,6 @@ packages:
     peerDependenciesMeta:
       '@mtcute/node':
         optional: true
-
-  '@mtcute/core@0.25.7':
-    resolution: {integrity: sha512-aE4aeALX9QMzPkaDk0IRs7gLQqCtqYd0XnysgaNZuZyVgPH8HgyX/AKJUNUeoOfnGZuvPbTZY5qVsBT7xKF6jw==}
 
   '@mtcute/core@0.25.8':
     resolution: {integrity: sha512-lP0H1ZpicAwrcHC112BCugueUVp/XEVvlD+x+wTvphxOvR49GNpg521lMCRBSM40TcktepheJugPraoSJhc7cA==}
@@ -4511,17 +4508,6 @@ snapshots:
       '@mtcute/core': 0.25.8
     optionalDependencies:
       '@mtcute/node': 0.25.8
-
-  '@mtcute/core@0.25.7':
-    dependencies:
-      '@fuman/io': 0.0.15
-      '@fuman/net': 0.0.15
-      '@fuman/utils': 0.0.15
-      '@mtcute/file-id': 0.24.3
-      '@mtcute/tl': 211.0.0
-      '@mtcute/tl-runtime': 0.24.3
-      '@types/events': 3.0.0
-      long: 5.2.3
 
   '@mtcute/core@0.25.8':
     dependencies:
