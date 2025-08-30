@@ -156,7 +156,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       const tg = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
-        storage: new MemoryStorage(),
+        storage: `${account.name}_session_data`,
         initConnectionOptions: getInitConnectionOptions() as any,
         network: {
           // usePfs: true,
