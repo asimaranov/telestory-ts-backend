@@ -14,6 +14,10 @@ import {
   AccountBanData,
   AccountBanDataSchema,
 } from './schema/account-ban.schema.js';
+import {
+  SessionHistoryData,
+  SessionHistorySchema,
+} from './schema/session-history.schema.js';
 import { NodeStatsModule } from '../node-stats/node-stats.module.js';
 
 @Module({
@@ -27,6 +31,10 @@ import { NodeStatsModule } from '../node-stats/node-stats.module.js';
       {
         name: AccountBanData.name,
         schema: AccountBanDataSchema,
+      },
+      {
+        name: SessionHistoryData.name,
+        schema: SessionHistorySchema,
       },
     ]),
     NodesModule,

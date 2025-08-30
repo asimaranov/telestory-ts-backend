@@ -9,7 +9,9 @@ import { SentCode, TelegramClient, tl } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
 import { AccountBanData } from '../schema/account-ban.schema.js';
+import { SessionHistoryData } from '../schema/session-history.schema.js';
 import { NodeStatsService } from '../../node-stats/node-stats.service.js';
+import { createHash } from 'crypto';
 import {
   CallbackDataBuilder,
   Dispatcher,
@@ -129,6 +131,8 @@ export class TelestoryAccountsService implements OnModuleInit {
     private telestoryPendingAccountData: Model<TelestoryPendingAccountData>,
     @InjectModel(AccountBanData.name)
     private accountBanData: Model<AccountBanData>,
+    @InjectModel(SessionHistoryData.name)
+    private sessionHistoryData: Model<SessionHistoryData>,
     @Inject(forwardRef(() => NodeStatsService))
     private nodeStatsService: NodeStatsService,
   ) {}
@@ -158,6 +162,64 @@ export class TelestoryAccountsService implements OnModuleInit {
           // usePfs: true,
         },
       });
+
+      // Set up session persistence handler using storage callback
+      const originalStorage = tg.storage as any;
+      if (
+        originalStorage &&
+        typeof originalStorage === 'object' &&
+        'write' in originalStorage
+      ) {
+        const originalWrite = originalStorage.write?.bind(originalStorage);
+        if (originalWrite) {
+          originalStorage.write = async (key: string, value: any) => {
+            await originalWrite(key, value);
+
+            // If auth key or session data changed, update our database
+            if (key === 'session_data' || key === 'auth_key') {
+              console.log(
+                `Session data updated for account ${account.name}, key: ${key}`,
+              );
+              try {
+                // Get previous session data for history tracking
+                const existingAccount = await this.telestoryAccountData.findOne(
+                  { name: account.name },
+                );
+                const previousSessionData = existingAccount?.sessionData;
+
+                const newSession = await tg.exportSession();
+                await this.telestoryAccountData.updateOne(
+                  { name: account.name },
+                  {
+                    sessionData: newSession,
+                    lastActive: new Date(),
+                  },
+                );
+
+                // Save session history
+                await this.saveSessionHistory(
+                  account.name,
+                  newSession,
+                  key as 'auth_key' | 'session_data',
+                  previousSessionData,
+                  `Automatic ${key} update during client operation`,
+                );
+
+                console.log(
+                  `Persisted session update for account ${account.name}`,
+                );
+              } catch (error) {
+                console.error(
+                  `Failed to persist session for account ${account.name}:`,
+                  error,
+                );
+              }
+            }
+          };
+        }
+      }
+
+      await tg.connect();
       // console.log('Importing session for account', account.name);
 
       // console.log('Session imported for account', account.name);
@@ -182,6 +244,15 @@ export class TelestoryAccountsService implements OnModuleInit {
         console.log(
           `Account ${account.name} imported successfully. Account: ${self.firstName} ${self.lastName} (${self.username || 'no username'}). Id: ${self.id}`,
         );
+
+        // Save initial session history entry
+        await this.saveSessionHistory(
+          account.name,
+          account.sessionData,
+          'initial',
+          undefined,
+          'Account initialization on service startup',
+        );
       } catch (error) {
         console.error(
           `Error importing session for account ${account.name}: ${error}`,
@@ -202,6 +273,9 @@ export class TelestoryAccountsService implements OnModuleInit {
         apiHash: process.env.API_HASH!,
         storage: 'bot_storage',
       });
+
+      // Bot client uses file storage which automatically persists session changes
+      // No additional session handling needed for bot client
 
       console.log('Starting bot client');
       try {
@@ -717,6 +791,64 @@ export class TelestoryAccountsService implements OnModuleInit {
       },
     });
 
+    // Set up session persistence for pending client
+    const originalStorage = tg.storage as any;
+    if (
+      originalStorage &&
+      typeof originalStorage === 'object' &&
+      'write' in originalStorage
+    ) {
+      const originalWrite = originalStorage.write?.bind(originalStorage);
+      if (originalWrite) {
+        originalStorage.write = async (key: string, value: any) => {
+          await originalWrite(key, value);
+
+          // If auth key or session data changed, update pending account in database
+          if (key === 'session_data' || key === 'auth_key') {
+            console.log(
+              `Pending client session data updated for ${normalizedPhone}, key: ${key}`,
+            );
+            try {
+              // Get previous session data for history tracking
+              const existingPendingAccount =
+                await this.telestoryPendingAccountData.findOne({
+                  phone: normalizedPhone,
+                });
+              const previousSessionData = existingPendingAccount?.sessionData;
+
+              const newSession = await tg.exportSession();
+              await this.telestoryPendingAccountData.updateOne(
+                { phone: normalizedPhone },
+                {
+                  sessionData: newSession,
+                },
+              );
+
+              // Save session history for pending account (use phone as name since name might not be set yet)
+              const accountName =
+                existingPendingAccount?.name || `pending_${normalizedPhone}`;
+              await this.saveSessionHistory(
+                accountName,
+                newSession,
+                key as 'auth_key' | 'session_data',
+                previousSessionData,
+                `Pending account ${key} update during registration`,
+              );
+
+              console.log(
+                `Persisted pending session update for ${normalizedPhone}`,
+              );
+            } catch (error) {
+              console.error(
+                `Failed to persist pending session for ${normalizedPhone}:`,
+                error,
+              );
+            }
+          }
+        };
+      }
+    }
+
     this.pendingClients.set(normalizedPhone, tg);
 
     console.log('Send code request', phone, normalizedPhone, {
@@ -824,6 +956,15 @@ export class TelestoryAccountsService implements OnModuleInit {
     });
 
     await account.save();
+
+    // Save session history for new account creation
+    await this.saveSessionHistory(
+      pendingAccount.name,
+      session,
+      'initial',
+      undefined,
+      'New account creation and confirmation',
+    );
   }
 
   async getAccount(
@@ -962,6 +1103,145 @@ export class TelestoryAccountsService implements OnModuleInit {
     } catch (error) {
       console.error('Failed to get account bans:', error);
       return [];
+    }
+  }
+
+  /**
+   * Creates a hash of session data for comparison
+   * @param sessionData - The session data to hash
+   * @returns SHA256 hash of the session data
+   */
+  private createSessionHash(sessionData: string): string {
+    return createHash('sha256').update(sessionData).digest('hex');
+  }
+
+  /**
+   * Saves session history entry
+   * @param accountName - Account name
+   * @param sessionData - Current session data
+   * @param changeType - Type of change that occurred
+   * @param previousSessionData - Previous session data for comparison
+   * @param changeReason - Optional reason for the change
+   */
+  private async saveSessionHistory(
+    accountName: string,
+    sessionData: string,
+    changeType: 'auth_key' | 'session_data' | 'initial' | 'manual_update',
+    previousSessionData?: string,
+    changeReason?: string,
+  ): Promise<void> {
+    try {
+      // Get account info for phone number
+      const account = await this.telestoryAccountData.findOne({
+        name: accountName,
+      });
+
+      const newSessionHash = this.createSessionHash(sessionData);
+      const previousSessionHash = previousSessionData
+        ? this.createSessionHash(previousSessionData)
+        : undefined;
+
+      // Only save if the session actually changed
+      if (previousSessionHash && newSessionHash === previousSessionHash) {
+        return;
+      }
+
+      const historyEntry = new this.sessionHistoryData({
+        accountName,
+        accountPhone: account?.phone,
+        sessionData,
+        changeType,
+        nodeId: process.env.NODE_ID || 'unknown',
+        changeReason,
+        previousSessionHash,
+        newSessionHash,
+        createdAt: new Date(),
+        isCompressed: false, // Could implement compression later
+      });
+
+      await historyEntry.save();
+      console.log(
+        `Session history saved for account ${accountName}, type: ${changeType}`,
+      );
+    } catch (error) {
+      console.error(
+        `Failed to save session history for account ${accountName}:`,
+        error,
+      );
+      // Don't throw error to avoid disrupting main flow
+    }
+  }
+
+  /**
+   * Gets session history for an account
+   * @param accountName - The account name
+   * @param limit - Maximum number of entries to return
+   * @returns Session history entries
+   */
+  async getSessionHistory(
+    accountName: string,
+    limit: number = 50,
+  ): Promise<SessionHistoryData[]> {
+    try {
+      return await this.sessionHistoryData
+        .find({ accountName })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('-sessionData') // Exclude actual session data for security
+        .exec();
+    } catch (error) {
+      console.error(
+        `Failed to get session history for account ${accountName}:`,
+        error,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Gets session history statistics for an account
+   * @param accountName - The account name
+   * @returns Session history statistics
+   */
+  async getSessionHistoryStats(accountName: string): Promise<{
+    totalEntries: number;
+    lastChange: Date | null;
+    changeTypeCounts: Record<string, number>;
+  }> {
+    try {
+      const [totalEntries, lastEntry, changeTypes] = await Promise.all([
+        this.sessionHistoryData.countDocuments({ accountName }),
+        this.sessionHistoryData
+          .findOne({ accountName })
+          .sort({ createdAt: -1 })
+          .select('createdAt')
+          .exec(),
+        this.sessionHistoryData.aggregate([
+          { $match: { accountName } },
+          { $group: { _id: '$changeType', count: { $sum: 1 } } },
+        ]),
+      ]);
+
+      const changeTypeCounts: Record<string, number> = {};
+      changeTypes.forEach((item: any) => {
+        changeTypeCounts[item._id] = item.count;
+      });
+
+      return {
+        totalEntries,
+        lastChange: lastEntry?.createdAt || null,
+        changeTypeCounts,
+      };
+    } catch (error) {
+      console.error(
+        `Failed to get session history stats for account ${accountName}:`,
+        error,
+      );
+      return {
+        totalEntries: 0,
+        lastChange: null,
+        changeTypeCounts: {},
+      };
     }
   }
 }
