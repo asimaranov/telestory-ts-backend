@@ -35,7 +35,10 @@ export class SessionHistoryData {
   @Prop({ required: true, default: Date.now, index: true })
   createdAt: Date;
 
-  @Prop({ required: false })
+  @Prop({ 
+    required: false,
+    type: Object
+  })
   metadata?: {
     userAgent?: string;
     ipAddress?: string;
