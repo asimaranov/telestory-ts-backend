@@ -661,7 +661,6 @@ export class DownloaderService implements OnModuleInit {
     try {
       return await mutex.runExclusive(async () => {
         let resolvedPeer: tl.RawUser | null = null;
-
         if (username.match(/^\d+$/)) {
           resolvedPeer = await this.resolvePeerByPhone(tg, username);
         } else {
@@ -678,6 +677,7 @@ export class DownloaderService implements OnModuleInit {
               cause: 'Cached username not occupied',
             });
           }
+
           resolvedPeer = await this.resolvePeerByUsername(
             tg,
             username,
@@ -721,11 +721,11 @@ export class DownloaderService implements OnModuleInit {
                 userId: resolvedPeer.id,
                 accessHash: resolvedPeer.accessHash!,
               }
-            : {
+            : ({
                 _: 'inputPeerChannel' as 'inputPeerChannel',
                 channelId: resolvedPeer.id,
                 accessHash: resolvedPeer.accessHash!,
-              } as tl.RawInputPeerUser | tl.RawInputPeerChannel;
+              } as tl.RawInputPeerUser | tl.RawInputPeerChannel);
 
         if (archive) {
           stories = (await this.getPinnedStories(
@@ -935,6 +935,14 @@ export class DownloaderService implements OnModuleInit {
       });
     } catch (error) {
       console.error(error);
+      if (error && error.code == 401) {
+        // Handle account died
+
+        await this.telestoryAccountData.updateOne(
+          { name: accountData.name },
+          { isActive: false, inactiveReason: error.message },
+        );
+      }
       return {
         ok: false,
         error: error?.message || JSON.stringify(error),

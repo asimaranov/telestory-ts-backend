@@ -160,8 +160,6 @@ export class AppController {
         error.message,
       );
 
-
-
       // Fallback to local processing if remote node fails
       console.log('Falling back to local processing');
 
@@ -479,8 +477,9 @@ export class AppController {
       }
 
       // Get next account and bot client
-      const { account: client } = await this.telestoryAccountsService.getNextAccount();
-      
+      const { account: client } =
+        await this.telestoryAccountsService.getNextAccount();
+
       let userId: number;
       let actualUsername: string | undefined = query.username;
 
@@ -504,17 +503,17 @@ export class AppController {
           actualUsername = (user as any).username;
         } catch (error) {
           console.error('Error importing contact:', error);
-          return { 
-            ok: false, 
-            error: 'Unknown error', 
-            error_debug: error.message 
+          return {
+            ok: false,
+            error: 'Unknown error',
+            error_debug: error.message,
           };
         }
       } else {
         // Handle username
         try {
           const resolvedPeer = await client.resolvePeer(query.username);
-          
+
           if (resolvedPeer._ === 'inputPeerUser') {
             userId = resolvedPeer.userId;
             // We already have the username from the query
@@ -524,10 +523,10 @@ export class AppController {
           }
         } catch (error) {
           console.error('Error resolving username:', error);
-          return { 
-            ok: false, 
-            error: 'Unknown error', 
-            error_debug: error.message 
+          return {
+            ok: false,
+            error: 'Unknown error',
+            error_debug: error.message,
           };
         }
       }
@@ -539,10 +538,10 @@ export class AppController {
       };
     } catch (error) {
       console.error('Error in getUserIdByUsername:', error);
-      return { 
-        ok: false, 
-        error: 'Unknown error', 
-        error_debug: error.message 
+      return {
+        ok: false,
+        error: 'Unknown error',
+        error_debug: error.message,
       };
     }
   }
