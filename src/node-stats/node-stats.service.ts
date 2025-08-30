@@ -41,6 +41,8 @@ export class NodeStatsService {
     let totalAccounts = 0;
     let totalActiveAccounts = 0;
     let totalRequestsLastDay = 0;
+    let totalRequestsLastWeek = 0;
+    let totalRequestsLastMonth = 0;
     let totalDiskSpaceUsed = 0;
     let activeNodes = 0;
     let approvedNodes = 0;
@@ -73,6 +75,8 @@ export class NodeStatsService {
         console.log('Updating totalAccounts', totalAccounts);
         totalActiveAccounts += stats.accountsStats.activeAccounts;
         totalRequestsLastDay += stats.requestStats.requestsLastDay;
+        totalRequestsLastWeek += stats.requestStats.requestsLastWeek;
+        totalRequestsLastMonth += stats.requestStats.requestsLastMonth;
         totalDiskSpaceUsed +=
           stats.systemStats.totalDiskSpace - stats.systemStats.freeDiskSpace;
 
@@ -137,6 +141,8 @@ export class NodeStatsService {
         totalAccounts,
         totalActiveAccounts,
         totalRequestsLastDay,
+        totalRequestsLastWeek,
+        totalRequestsLastMonth,
         totalDiskSpaceUsed,
         totalDiskSpaceUsedFormatted: this.formatBytes(totalDiskSpaceUsed),
       },

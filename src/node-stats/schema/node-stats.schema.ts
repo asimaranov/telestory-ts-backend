@@ -151,6 +151,8 @@ export class AllNodesStatsDto {
     totalAccounts: number;
     totalActiveAccounts: number;
     totalRequestsLastDay: number;
+    totalRequestsLastWeek: number;
+    totalRequestsLastMonth: number;
     totalDiskSpaceUsed: number;
     totalDiskSpaceUsedFormatted: string;
   };

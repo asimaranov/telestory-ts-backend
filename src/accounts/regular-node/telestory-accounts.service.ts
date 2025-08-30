@@ -541,6 +541,7 @@ export class TelestoryAccountsService implements OnModuleInit {
             statsMessage += `• Всего аккаунтов: **${statsData.summary.totalAccounts}**\n`;
             statsMessage += `• Активных аккаунтов: **${statsData.summary.totalActiveAccounts}**\n`;
             statsMessage += `• Запросов за день: **${statsData.summary.totalRequestsLastDay}**\n`;
+            statsMessage += `• Запросов за месяц: **${statsData.summary.totalRequestsLastMonth}**\n`;
             statsMessage += `• Использовано диска: **${statsData.summary.totalDiskSpaceUsedFormatted}**\n\n`;
 
             // Add individual node stats
@@ -551,6 +552,7 @@ export class TelestoryAccountsService implements OnModuleInit {
               statsMessage += `• Одобрена: ${node.approvedByMaster ? '✅ Да' : '❌ Нет'}\n`;
               statsMessage += `• Аккаунты: **${node.accountsStats.activeAccounts}**/**${node.accountsStats.totalAccounts}**\n`;
               statsMessage += `• Запросов за день: **${node.requestStats.requestsLastDay}**\n`;
+              statsMessage += `• Запросов за месяц: **${node.requestStats.requestsLastMonth}**\n`;
               const usedSpacePercent =
                 100 - node.systemStats.freeDiskSpacePercent;
 
