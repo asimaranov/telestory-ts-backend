@@ -11,6 +11,7 @@ import {
 } from './schema/downloader.schema.js';
 import { TelestoryAccountData } from '../accounts/schema/telestory-account.schema.js';
 import { TelestoryAccountsService } from '../accounts/regular-node/telestory-accounts.service.js';
+import { DownloadsStatsService } from '../downloads-stats/downloads-stats.service.js';
 import { tl } from '@mtcute/node';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -80,6 +81,7 @@ export class DownloaderService implements OnModuleInit {
     private invalidUsernames: Model<InvalidUsernamesData>,
     @InjectModel(StoriesCacheData.name)
     private storiesCache: Model<StoriesCacheData>,
+    private downloadsStatsService: DownloadsStatsService,
   ) {}
 
   async onModuleInit() {
@@ -876,6 +878,29 @@ export class DownloaderService implements OnModuleInit {
             await tg.downloadToFile(storyFilePath, story.content.fileId);
 
             console.log('Downloaded story', story.content.fileId);
+
+            // Record download statistics after successful download
+            try {
+              const fileStats = fs.statSync(storyFilePath);
+              const fileSize = fileStats.size;
+              const fileType = story.mediaType || 'unknown';
+
+              await this.downloadsStatsService.addDownloadStats(
+                process.env.NODE_ID!,
+                accountData.name,
+                fileSize,
+                fileType,
+              );
+
+              console.log('Recorded download stats:', {
+                nodeId: process.env.NODE_ID,
+                account: accountData.name,
+                fileSize: fileSize,
+                fileType: fileType,
+              });
+            } catch (statsError) {
+              console.warn('Failed to record download stats:', statsError);
+            }
           } catch (error) {
             console.log('Failed to download story', error);
           }

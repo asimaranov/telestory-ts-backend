@@ -14,6 +14,7 @@ import {
   TelestoryAccountData,
   TelestoryAccountDataSchema,
 } from '../accounts/schema/telestory-account.schema.js';
+import { DownloadsStatsModule } from '../downloads-stats/downloads-stats.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import {
     ]),
     NodesModule,
     AccountsModule,
+    DownloadsStatsModule,
   ],
   providers: [DownloaderService],
   exports: [DownloaderService],
