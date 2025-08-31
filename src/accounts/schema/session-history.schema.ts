@@ -18,7 +18,7 @@ export class SessionHistoryData {
   sessionData: string;
 
   @Prop({ required: true, index: true })
-  changeType: 'auth_key' | 'session_data' | 'initial' | 'manual_update';
+  changeType: 'auth_key' | 'session_data' | 'initial' | 'manual_update' | 'transfer';
 
   @Prop({ required: true, index: true })
   nodeId: string;
@@ -35,9 +35,9 @@ export class SessionHistoryData {
   @Prop({ required: true, default: Date.now, index: true })
   createdAt: Date;
 
-  @Prop({ 
+  @Prop({
     required: false,
-    type: Object
+    type: Object,
   })
   metadata?: {
     userAgent?: string;

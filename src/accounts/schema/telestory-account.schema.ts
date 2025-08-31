@@ -45,6 +45,11 @@ export class BaseTelestoryAccountDocument extends Document {
     required: false, // Making it optional for existing accounts
   })
   phone?: string;
+  @Prop({
+    type: String,
+    required: false, // Optional property for account transfer
+  })
+  transfertonode?: string;
 }
 
 @Schema({ timestamps: true, collection: 'telestory_accounts' })

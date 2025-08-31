@@ -1,11 +1,12 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { Mutex } from 'async-mutex';
 import { TelestoryAccountData } from '../schema/telestory-account.schema.js';
 import { Model } from 'mongoose';
 import * as fs from 'fs-extra';
 import { InjectModel } from '@nestjs/mongoose';
-import { SentCode, TelegramClient, tl } from '@mtcute/node';
+import { SentCode, SqliteStorage, TelegramClient, tl } from '@mtcute/node';
 import { TelestoryNodesService } from '../../nodes/nodes.service.js';
 import { TelestoryPendingAccountData } from '../schema/telestory-pending-account.schema.js';
 import { AccountBanData } from '../schema/account-ban.schema.js';
@@ -152,73 +153,63 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     console.log(`Found ${accounts.length} accounts to import`);
 
+    if (!fs.existsSync('sessions')) {
+      fs.mkdirSync('sessions');
+    }
+
     for (const account of accounts) {
+      // const storage = new SqliteStorage(
+      //   `sessions/${account.name}_session_data.sqlite`,
+      // );
+
+      // const originalAuthKeysSet = storage.authKeys.set.bind(storage);
+
+      // storage.authKeys.set = async (key, value) => {
+      //   const existingAccount = await this.telestoryAccountData.findOne({
+      //     name: account.name,
+      //   });
+      //   const previousSessionData = existingAccount?.sessionData;
+      //   try {
+      //     const newSession = await tg.exportSession();
+
+      //     await this.telestoryAccountData.updateOne(
+      //       { name: account.name },
+      //       {
+      //         sessionData: newSession,
+      //         lastActive: new Date(),
+      //       },
+      //     );
+
+      //     // Save session history
+      //     await this.saveSessionHistory(
+      //       account.name,
+      //       newSession,
+      //       key as unknown as 'auth_key' | 'session_data',
+      //       previousSessionData,
+      //       `Automatic ${key} update during client operation`,
+      //     );
+
+      //     console.log(`Persisted session update for account ${account.name}`);
+      //   } catch (error) {
+      //     console.error(
+      //       `Error exporting session for account ${account.name}: ${error}`,
+      //     );
+      //   }
+
+      //   await originalAuthKeysSet(key, value);
+      // };
+
       const tg = new TelegramClient({
         apiId: Number(process.env.API_ID),
         apiHash: process.env.API_HASH!,
-        storage: `${account.name}_session_data`,
+        storage: new MemoryStorage(),
         initConnectionOptions: getInitConnectionOptions() as any,
         network: {
           // usePfs: true,
         },
       });
 
-      // Set up session persistence handler using storage callback
-      const originalStorage = tg.storage as any;
-      if (
-        originalStorage &&
-        typeof originalStorage === 'object' &&
-        'write' in originalStorage
-      ) {
-        const originalWrite = originalStorage.write?.bind(originalStorage);
-        if (originalWrite) {
-          originalStorage.write = async (key: string, value: any) => {
-            await originalWrite(key, value);
-
-            // If auth key or session data changed, update our database
-            if (key === 'session_data' || key === 'auth_key') {
-              console.log(
-                `Session data updated for account ${account.name}, key: ${key}`,
-              );
-              try {
-                // Get previous session data for history tracking
-                const existingAccount = await this.telestoryAccountData.findOne(
-                  { name: account.name },
-                );
-                const previousSessionData = existingAccount?.sessionData;
-
-                const newSession = await tg.exportSession();
-                await this.telestoryAccountData.updateOne(
-                  { name: account.name },
-                  {
-                    sessionData: newSession,
-                    lastActive: new Date(),
-                  },
-                );
-
-                // Save session history
-                await this.saveSessionHistory(
-                  account.name,
-                  newSession,
-                  key as 'auth_key' | 'session_data',
-                  previousSessionData,
-                  `Automatic ${key} update during client operation`,
-                );
-
-                console.log(
-                  `Persisted session update for account ${account.name}`,
-                );
-              } catch (error) {
-                console.error(
-                  `Failed to persist session for account ${account.name}:`,
-                  error,
-                );
-              }
-            }
-          };
-        }
-      }
-
+      // Set
       await tg.connect();
       // console.log('Importing session for account', account.name);
 
@@ -791,63 +782,8 @@ export class TelestoryAccountsService implements OnModuleInit {
       },
     });
 
-    // Set up session persistence for pending client
-    const originalStorage = tg.storage as any;
-    if (
-      originalStorage &&
-      typeof originalStorage === 'object' &&
-      'write' in originalStorage
-    ) {
-      const originalWrite = originalStorage.write?.bind(originalStorage);
-      if (originalWrite) {
-        originalStorage.write = async (key: string, value: any) => {
-          await originalWrite(key, value);
-
-          // If auth key or session data changed, update pending account in database
-          if (key === 'session_data' || key === 'auth_key') {
-            console.log(
-              `Pending client session data updated for ${normalizedPhone}, key: ${key}`,
-            );
-            try {
-              // Get previous session data for history tracking
-              const existingPendingAccount =
-                await this.telestoryPendingAccountData.findOne({
-                  phone: normalizedPhone,
-                });
-              const previousSessionData = existingPendingAccount?.sessionData;
-
-              const newSession = await tg.exportSession();
-              await this.telestoryPendingAccountData.updateOne(
-                { phone: normalizedPhone },
-                {
-                  sessionData: newSession,
-                },
-              );
-
-              // Save session history for pending account (use phone as name since name might not be set yet)
-              const accountName =
-                existingPendingAccount?.name || `pending_${normalizedPhone}`;
-              await this.saveSessionHistory(
-                accountName,
-                newSession,
-                key as 'auth_key' | 'session_data',
-                previousSessionData,
-                `Pending account ${key} update during registration`,
-              );
-
-              console.log(
-                `Persisted pending session update for ${normalizedPhone}`,
-              );
-            } catch (error) {
-              console.error(
-                `Failed to persist pending session for ${normalizedPhone}:`,
-                error,
-              );
-            }
-          }
-        };
-      }
-    }
+    const storage = new MemoryStorage();
+    // tg.onConnectionState.(storage);
 
     this.pendingClients.set(normalizedPhone, tg);
 
@@ -940,6 +876,8 @@ export class TelestoryAccountsService implements OnModuleInit {
     }
 
     const session = await tg.exportSession();
+
+    await tg.disconnect();
 
     const account = new this.telestoryAccountData({
       name: pendingAccount.name,
@@ -1126,7 +1064,12 @@ export class TelestoryAccountsService implements OnModuleInit {
   private async saveSessionHistory(
     accountName: string,
     sessionData: string,
-    changeType: 'auth_key' | 'session_data' | 'initial' | 'manual_update',
+    changeType:
+      | 'auth_key'
+      | 'session_data'
+      | 'initial'
+      | 'manual_update'
+      | 'transfer',
     previousSessionData?: string,
     changeReason?: string,
   ): Promise<void> {
@@ -1242,6 +1185,136 @@ export class TelestoryAccountsService implements OnModuleInit {
         lastChange: null,
         changeTypeCounts: {},
       };
+    }
+  }
+
+  /**
+   * Stops and disconnects a Telegram client for an account
+   * @param accountName - Name of the account to stop
+   */
+  async stopAccountClient(accountName: string): Promise<void> {
+    const client = this.accounts.get(accountName);
+    if (client) {
+      try {
+        console.log(`Stopping client for account: ${accountName}`);
+        await client.disconnect();
+
+        // Remove from active accounts and mutexes
+        this.accounts.delete(accountName);
+        this.accountMutexes.delete(accountName);
+
+        console.log(`Successfully stopped client for account: ${accountName}`);
+      } catch (error) {
+        console.error(
+          `Error stopping client for account ${accountName}:`,
+          error,
+        );
+        // Still remove from maps even if disconnect failed
+        this.accounts.delete(accountName);
+        this.accountMutexes.delete(accountName);
+      }
+    }
+  }
+
+  /**
+   * Processes account transfers - checks for accounts with transfertonode property
+   * and handles the transfer process
+   */
+  async processAccountTransfers(): Promise<void> {
+    try {
+      // Find accounts on this node that have transfertonode property set
+      const accountsToTransfer = await this.telestoryAccountData.find({
+        bindNodeId: process.env.NODE_ID,
+        transfertonode: { $exists: true, $ne: '' },
+        isActive: true,
+      });
+
+      console.log(`Found ${accountsToTransfer.length} accounts to transfer`);
+
+      for (const account of accountsToTransfer) {
+        const targetNodeId = account.transfertonode;
+
+        console.log(
+          `Processing transfer for account ${account.name} from ${process.env.NODE_ID} to ${targetNodeId}`,
+        );
+
+        try {
+          // Stop the account client
+          await this.stopAccountClient(account.name);
+
+          // Update the account: remove transfertonode property and change bindNodeId
+          await this.telestoryAccountData.updateOne(
+            { _id: account._id },
+            {
+              $set: {
+                bindNodeId: targetNodeId,
+                lastActive: new Date(),
+              },
+              $unset: {
+                transfertonode: 1, // Remove the transfertonode property
+              },
+            },
+          );
+
+          // Save session history entry for the transfer
+          await this.saveSessionHistory(
+            account.name,
+            account.sessionData,
+            'transfer',
+            account.bindNodeId,
+            `Account transferred from ${process.env.NODE_ID} to ${targetNodeId}`,
+          );
+
+          console.log(
+            `Successfully transferred account ${account.name} to node ${targetNodeId}`,
+          );
+        } catch (error) {
+          console.error(
+            `Failed to transfer account ${account.name} to node ${targetNodeId}:`,
+            error,
+          );
+
+          // If transfer failed, remove the transfertonode property to prevent retry loops
+          // but keep the account on the current node
+          try {
+            await this.telestoryAccountData.updateOne(
+              { _id: account._id },
+              {
+                $unset: {
+                  transfertonode: 1,
+                },
+                $set: {
+                  inactiveReason: `Transfer failed: ${error.message}`,
+                },
+              },
+            );
+          } catch (updateError) {
+            console.error(
+              `Failed to cleanup failed transfer for account ${account.name}:`,
+              updateError,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing account transfers:', error);
+    }
+  }
+
+  /**
+   * Checks and processes account transfers periodically
+   * This method runs every 30 seconds via cron job to handle account transfers
+   */
+  @Cron('*/60 * * * * *') // Every 30 seconds
+  async checkForAccountTransfers(): Promise<void> {
+    if (!this.initialized) {
+      return; // Don't run before service is fully initialized
+    }
+
+    try {
+      await this.processAccountTransfers();
+    } catch (error) {
+      console.error('Error in cron account transfer check:', error);
     }
   }
 }
