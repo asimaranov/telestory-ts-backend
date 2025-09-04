@@ -57,3 +57,13 @@ export class TelestoryAccountData extends BaseTelestoryAccountDocument {}
 
 export const TelestoryAccountDataSchema =
   SchemaFactory.createForClass(TelestoryAccountData);
+
+// Add compound unique index to ensure phone uniqueness across bindNodeId
+TelestoryAccountDataSchema.index(
+  { phone: 1, bindNodeId: 1 },
+  {
+    unique: true,
+    sparse: true, // Allow documents without phone field
+    name: 'phone_bindNodeId_unique',
+  },
+);

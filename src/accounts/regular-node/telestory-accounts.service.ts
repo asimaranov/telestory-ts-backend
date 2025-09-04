@@ -879,21 +879,42 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     await tg.disconnect();
 
-    const account = new this.telestoryAccountData({
-      name: pendingAccount.name,
-      sessionData: session,
-      bindNodeId: nodeId || process.env.NODE_ID,
-      lastActive: new Date(),
-      isActive: true,
-      type: 'user',
-      phone: normalizedPhone,
-    });
+    const finalBindNodeId = nodeId || process.env.NODE_ID;
+
+    // Use upsert to ensure phone uniqueness across bindNodeId
+    const upsertResult = await this.telestoryAccountData.updateOne(
+      {
+        phone: normalizedPhone,
+        bindNodeId: finalBindNodeId,
+      },
+      {
+        $set: {
+          name: pendingAccount.name,
+          sessionData: session,
+          bindNodeId: finalBindNodeId,
+          lastActive: new Date(),
+          isActive: true,
+          type: 'user',
+          phone: normalizedPhone,
+        },
+        $setOnInsert: {
+          // These fields are only set when creating a new document
+          createdAt: new Date(),
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+      },
+    );
 
     await this.telestoryPendingAccountData.deleteOne({
       _id: pendingAccount._id,
     });
 
-    await account.save();
+    console.log(
+      `Account upsert result: ${upsertResult.upsertedCount ? 'created' : 'updated'} for phone ${normalizedPhone} on node ${finalBindNodeId}`,
+    );
 
     // Save session history for new account creation
     await this.saveSessionHistory(
