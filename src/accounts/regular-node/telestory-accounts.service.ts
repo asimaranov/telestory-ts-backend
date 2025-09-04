@@ -932,6 +932,7 @@ export class TelestoryAccountsService implements OnModuleInit {
           isActive: true,
           type: 'user',
           phone: normalizedPhone,
+          inactiveReason: '',
         },
         $setOnInsert: {
           // These fields are only set when creating a new document
@@ -960,6 +961,106 @@ export class TelestoryAccountsService implements OnModuleInit {
       undefined,
       'New account creation and confirmation',
     );
+
+    // Clean up pending client
+    this.pendingClients.delete(normalizedPhone);
+
+    // Add the new account to the active accounts service if it's on the current node
+    if (finalBindNodeId === process.env.NODE_ID) {
+      try {
+        await this.initializeAccount({
+          name: pendingAccount.name,
+          sessionData: session,
+          phone: normalizedPhone,
+          bindNodeId: finalBindNodeId,
+          isActive: true,
+          type: 'user',
+        } as any);
+
+        console.log(
+          `Successfully added account ${pendingAccount.name} to active accounts service`,
+        );
+      } catch (error) {
+        console.error(
+          `Failed to initialize account ${pendingAccount.name} in service:`,
+          error,
+        );
+        // Mark account as inactive if initialization fails
+        await this.telestoryAccountData.updateOne(
+          { name: pendingAccount.name, bindNodeId: finalBindNodeId },
+          {
+            $set: {
+              isActive: false,
+              inactiveReason: `Failed to initialize: ${error.message}`,
+            },
+          },
+        );
+      }
+    }
+  }
+
+  /**
+   * Initializes a single account and adds it to the active accounts service
+   * @param account - The account data to initialize
+   */
+  private async initializeAccount(
+    account: TelestoryAccountData,
+  ): Promise<void> {
+    const tg = new TelegramClient({
+      apiId: Number(process.env.API_ID),
+      apiHash: process.env.API_HASH!,
+      storage: new MemoryStorage(),
+      initConnectionOptions: getInitConnectionOptions() as any,
+      network: {
+        // usePfs: true,
+      },
+    });
+
+    // Connect to Telegram
+    await tg.connect();
+
+    // Set up message dispatcher
+    const dp = Dispatcher.for(tg);
+
+    dp.onNewMessage(async (msg) => {
+      console.log('New message on account', account.name, msg);
+      if (msg.isOutgoing) {
+        return;
+      }
+      await msg.answerText(
+        'Привет. Я один из тайных агентов @tele_story_bot. Если ты заметил меня в своих просмотрах, значит кто-то неравнодушен к твоей жизни. Хочешь узнать кто? Переходи в бота 👈',
+      );
+    });
+
+    try {
+      // Start the client with the session data
+      await start(tg, {
+        session: account.sessionData,
+      });
+
+      const self = await tg.getMe();
+      console.log(
+        `Account ${account.name} initialized successfully. Account: ${self.firstName} ${self.lastName} (${self.username || 'no username'}). Id: ${self.id}`,
+      );
+
+      // Add to active accounts and mutexes
+      this.accounts.set(account.name, tg);
+      this.accountMutexes.set(account.name, new Mutex());
+    } catch (error) {
+      console.error(`Error initializing account ${account.name}: ${error}`);
+
+      // Clean up the client connection on error
+      try {
+        await tg.disconnect();
+      } catch (disconnectError) {
+        console.error(
+          `Error disconnecting failed account ${account.name}:`,
+          disconnectError,
+        );
+      }
+
+      throw error;
+    }
   }
 
   async getAccount(
