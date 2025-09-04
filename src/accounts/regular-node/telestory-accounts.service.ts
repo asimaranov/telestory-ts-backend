@@ -213,7 +213,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       });
 
       // Set
-      await tg.connect();
+      // await tg.connect();
       // console.log('Importing session for account', account.name);
 
       // console.log('Session imported for account', account.name);
@@ -233,6 +233,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       try {
         await start(tg, {
           session: account.sessionData,
+          sessionForce: true,
         });
         const self = await tg.getMe();
         console.log(
@@ -253,7 +254,7 @@ export class TelestoryAccountsService implements OnModuleInit {
         );
         account.isActive = false;
         account.inactiveReason = error.message;
-        await account.save();
+        await account.save({});
         continue;
       }
 
@@ -913,7 +914,8 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     const session = await tg.exportSession();
 
-    await tg.disconnect();
+    await tg.destroy();
+
 
     const finalBindNodeId = targetNodeId;
 
@@ -1051,7 +1053,7 @@ export class TelestoryAccountsService implements OnModuleInit {
 
       // Clean up the client connection on error
       try {
-        await tg.disconnect();
+        await tg.destroy();
       } catch (disconnectError) {
         console.error(
           `Error disconnecting failed account ${account.name}:`,
@@ -1355,7 +1357,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     if (client) {
       try {
         console.log(`Stopping client for account: ${accountName}`);
-        await client.disconnect();
+        await client.destroy();
 
         // Remove from active accounts and mutexes
         this.accounts.delete(accountName);
