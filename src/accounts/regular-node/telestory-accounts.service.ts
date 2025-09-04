@@ -916,7 +916,6 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     await tg.destroy();
 
-
     const finalBindNodeId = targetNodeId;
 
     // Use upsert to ensure phone uniqueness across bindNodeId
@@ -1019,7 +1018,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     });
 
     // Connect to Telegram
-    await tg.connect();
+    // await tg.connect();
 
     // Set up message dispatcher
     const dp = Dispatcher.for(tg);
@@ -1038,6 +1037,7 @@ export class TelestoryAccountsService implements OnModuleInit {
       // Start the client with the session data
       await start(tg, {
         session: account.sessionData,
+        sessionForce: true,
       });
 
       const self = await tg.getMe();
