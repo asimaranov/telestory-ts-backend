@@ -13,6 +13,8 @@ import { AccountBanData } from '../schema/account-ban.schema.js';
 import { SessionHistoryData } from '../schema/session-history.schema.js';
 import { NodeStatsService } from '../../node-stats/node-stats.service.js';
 import { createHash } from 'crypto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import {
   CallbackDataBuilder,
   Dispatcher,
@@ -136,6 +138,7 @@ export class TelestoryAccountsService implements OnModuleInit {
     private sessionHistoryData: Model<SessionHistoryData>,
     @Inject(forwardRef(() => NodeStatsService))
     private nodeStatsService: NodeStatsService,
+    private readonly httpService: HttpService,
   ) {}
 
   async onModuleInit() {
@@ -335,7 +338,12 @@ export class TelestoryAccountsService implements OnModuleInit {
         await state.merge({ phone });
 
         try {
-          const addAccountResult = await this.addAccountByPhone(name!, phone);
+          const { nodeId } = (await state.get()) as AddAccountState;
+          const addAccountResult = await this.addAccountByPhone(
+            name!,
+            phone,
+            nodeId,
+          );
           console.log('Add account result', addAccountResult);
           // await state.merge({ nodeId: addAccountResult.bindNodeId });
         } catch (error) {
@@ -768,7 +776,19 @@ export class TelestoryAccountsService implements OnModuleInit {
     }
   }
 
-  async addAccountByPhone(name: string, phone: string) {
+  async addAccountByPhone(name: string, phone: string, nodeId?: string) {
+    // Determine target node - use provided nodeId or default to current node
+    const targetNodeId = nodeId || process.env.NODE_ID!;
+
+    // If target node is remote, make API call instead of local operation
+    if (this.isRemoteNode(targetNodeId)) {
+      console.log(`Target node ${targetNodeId} is remote, making API call`);
+      return await this.callRemoteAddAccountByPhone(targetNodeId, name, phone);
+    }
+
+    // Local operation - existing logic
+    console.log(`Target node ${targetNodeId} is local, processing locally`);
+
     // Normalize the phone number to E.164 format for consistency
     const normalizedPhone = PhoneUtils.normalize(phone);
 
@@ -797,7 +817,7 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     const phoneCodeHash = code.phoneCodeHash;
 
-    const bindNodeId = process.env.NODE_ID!;
+    const bindNodeId = targetNodeId;
 
     const session = await tg.exportSession();
 
@@ -831,6 +851,22 @@ export class TelestoryAccountsService implements OnModuleInit {
     phoneCode: string,
     nodeId?: string,
   ) {
+    // Determine target node - use provided nodeId or default to current node
+    const targetNodeId = nodeId || process.env.NODE_ID!;
+
+    // If target node is remote, make API call instead of local operation
+    if (this.isRemoteNode(targetNodeId)) {
+      console.log(`Target node ${targetNodeId} is remote, making API call`);
+      return await this.callRemoteConfirmAccountByPhone(
+        targetNodeId,
+        phone,
+        phoneCode,
+      );
+    }
+
+    // Local operation - existing logic
+    console.log(`Target node ${targetNodeId} is local, processing locally`);
+
     // Normalize the phone number to ensure consistency with stored data
     const normalizedPhone = PhoneUtils.normalize(phone);
 
@@ -879,7 +915,7 @@ export class TelestoryAccountsService implements OnModuleInit {
 
     await tg.disconnect();
 
-    const finalBindNodeId = nodeId || process.env.NODE_ID;
+    const finalBindNodeId = targetNodeId;
 
     // Use upsert to ensure phone uniqueness across bindNodeId
     const upsertResult = await this.telestoryAccountData.updateOne(
@@ -1319,6 +1355,119 @@ export class TelestoryAccountsService implements OnModuleInit {
       }
     } catch (error) {
       console.error('Error processing account transfers:', error);
+    }
+  }
+
+  /**
+   * Checks if a node is remote (different from current node)
+   * @param nodeId - The node ID to check
+   * @returns true if the node is remote, false if it's the current node
+   */
+  private isRemoteNode(nodeId: string): boolean {
+    return nodeId !== process.env.NODE_ID;
+  }
+
+  /**
+   * Makes a remote API call to add an account by phone
+   * @param nodeId - The target node ID
+   * @param name - Account name
+   * @param phone - Phone number
+   * @returns The result from the remote node
+   */
+  private async callRemoteAddAccountByPhone(
+    nodeId: string,
+    name: string,
+    phone: string,
+  ): Promise<any> {
+    const node = Array.from(this.telestoryNodesService.nodes.values()).find(
+      (n) => n.name === nodeId,
+    );
+    if (!node) {
+      throw new Error(`Node ${nodeId} not found`);
+    }
+
+    try {
+      console.log(
+        `Making remote API call to ${node.apiUrl} for addAccountByPhone`,
+      );
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${node.apiUrl}accounts/addAccountByPhone`,
+          {
+            name,
+            phone,
+          },
+          {
+            timeout: 30000,
+            headers: {
+              'User-Agent': 'TeleStory-Node-API/1.0',
+              'Content-Type': 'application/json',
+              // Add basic auth if needed (same as in node-stats.service.ts)
+              Authorization: `Basic ${Buffer.from('admin:WvVjPsyZ').toString('base64')}`,
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Failed to call remote addAccountByPhone on ${nodeId}:`,
+        error.message,
+      );
+      throw new Error(`Remote API call failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Makes a remote API call to confirm an account by phone
+   * @param nodeId - The target node ID
+   * @param phone - Phone number
+   * @param phoneCode - Phone code
+   * @returns The result from the remote node
+   */
+  private async callRemoteConfirmAccountByPhone(
+    nodeId: string,
+    phone: string,
+    phoneCode: string,
+  ): Promise<any> {
+    const node = Array.from(this.telestoryNodesService.nodes.values()).find(
+      (n) => n.name === nodeId,
+    );
+    if (!node) {
+      throw new Error(`Node ${nodeId} not found`);
+    }
+
+    try {
+      console.log(
+        `Making remote API call to ${node.apiUrl} for confirmAccountByPhone`,
+      );
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${node.apiUrl}accounts/confirmAccountByPhone`,
+          {
+            phone,
+            phoneCode,
+          },
+          {
+            timeout: 30000,
+            headers: {
+              'User-Agent': 'TeleStory-Node-API/1.0',
+              'Content-Type': 'application/json',
+              // Add basic auth if needed (same as in node-stats.service.ts)
+              Authorization: `Basic ${Buffer.from('admin:WvVjPsyZ').toString('base64')}`,
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Failed to call remote confirmAccountByPhone on ${nodeId}:`,
+        error.message,
+      );
+      throw new Error(`Remote API call failed: ${error.message}`);
     }
   }
 

@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { HttpModule } from '@nestjs/axios';
 import {
   TelestoryAccountData,
   TelestoryAccountDataSchema,
@@ -37,6 +38,7 @@ import { NodeStatsModule } from '../node-stats/node-stats.module.js';
         schema: SessionHistorySchema,
       },
     ]),
+    HttpModule,
     NodesModule,
     forwardRef(() => NodeStatsModule),
   ],
