@@ -345,12 +345,13 @@ export class DownloaderService implements OnModuleInit {
   private async getPinnedStories(
     tg: TelegramClient,
     inputPeer: tl.RawInputPeerUser | tl.RawInputPeerChannel,
+    limit: number = 10,
   ) {
     const pinnedStories = await tg.call({
       _: 'stories.getPinnedStories',
       peer: inputPeer,
       offsetId: 0,
-      limit: 10,
+      limit: limit,
     });
     return pinnedStories.stories;
   }
@@ -623,6 +624,7 @@ export class DownloaderService implements OnModuleInit {
   async getStoryByUsername(
     username: string,
     archive: boolean = false,
+    archiveLimit: number = 10,
     markAsRead: boolean = false,
     storyIds: string[] = [],
     premium: boolean = false,
@@ -683,7 +685,7 @@ export class DownloaderService implements OnModuleInit {
           resolvedPeer = await this.resolvePeerByUsername(
             tg,
             username,
-            premium ? 25 : 10,
+            10,
           );
         }
 
@@ -733,6 +735,7 @@ export class DownloaderService implements OnModuleInit {
           stories = (await this.getPinnedStories(
             tg,
             inputPeer,
+            archiveLimit,
           )) as tl.TypeStoryItem[];
         } else if (storyIds.length > 0) {
           stories = (await this.getStoriesByIds(

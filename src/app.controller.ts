@@ -12,6 +12,7 @@ export class GetStoriesByUsernameQueryDto {
   api_key: string;
   username: string;
   archive?: string;
+  archive_limit?: string;
   mark?: string;
   premium?: string;
   story_ids?: string;
@@ -94,6 +95,7 @@ export class AppController {
 
     // Convert string parameters to boolean
     const archive = query.archive === 'true';
+    const archiveLimit = query.archive_limit ? parseInt(query.archive_limit) : 10;
     const markAsRead = query.mark === 'true';
     const premium = query.premium === 'true';
 
@@ -111,6 +113,7 @@ export class AppController {
       const result = await this.downloaderService.getStoryByUsername(
         query.username,
         archive,
+        archiveLimit,
         markAsRead,
         storyIds,
         premium,
@@ -170,6 +173,7 @@ export class AppController {
       const result = await this.downloaderService.getStoryByUsername(
         query.username,
         archive,
+        archiveLimit,
         markAsRead,
         storyIds,
         premium,
@@ -412,6 +416,7 @@ export class AppController {
     const archive = query.archive === 'true';
     const markAsRead = query.mark === 'true';
     const premium = query.premium === 'true';
+    const archiveLimit = query.archive_limit ? parseInt(query.archive_limit) : 10;
 
     // For now, we'll just validate that api_key is provided
     // You can add proper API key validation logic here
@@ -435,6 +440,7 @@ export class AppController {
     const stories = await this.downloaderService.getStoryByUsername(
       query.username,
       archive,
+      archiveLimit,
       markAsRead,
       storyIds,
       premium,

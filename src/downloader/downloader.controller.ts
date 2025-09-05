@@ -23,6 +23,15 @@ export class GetStoriesByUsernameDto {
   })
   archive?: boolean;
 
+
+  @ApiProperty({
+    description: 'The limit for the archive',
+    example: 10,
+    default: 10,
+    required: false,
+  })
+  archiveLimit?: number;
+
   @ApiProperty({
     description: 'Whether to mark the stories as read',
     example: true,
@@ -53,6 +62,8 @@ export class DownloaderController {
   async getStoriesByUsername(@Body() body: GetStoriesByUsernameDto) {
     const archive = body.archive ?? false;
     const markAsRead = body.markAsRead ?? false;
+    const archiveLimit = body.archiveLimit ?? 10;
+
     const storyIds = body.storyIds
       ? body.storyIds.split(',').map((id) => id.trim())
       : [];
@@ -60,6 +71,7 @@ export class DownloaderController {
     const stories = await this.downloaderService.getStoryByUsername(
       body.username,
       archive,
+      archiveLimit,
       markAsRead,
       storyIds,
     );
